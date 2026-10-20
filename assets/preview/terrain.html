@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Terrain preview</title>
+<style>
+  body{margin:0;background:#eef3f8;font:13px Segoe UI,Arial,sans-serif;color:#1d2b3a}
+  h3{margin:10px 16px 0;font-size:13px}
+  .grid{display:flex;flex-wrap:wrap;gap:12px;padding:12px}
+  .tile{background:#eef3f8;border:1px solid #d6dee7;border-radius:8px}
+  svg{overflow:visible;display:block}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes rise{0%{transform:translateY(0) scale(.6);opacity:0}25%{opacity:.85}100%{transform:translateY(-40px) scale(1.5);opacity:0}}
+  @keyframes flow{to{stroke-dashoffset:-24}}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}
+  @keyframes ring{0%{transform:scale(.2);opacity:.9}100%{transform:scale(1.7);opacity:0}}
+  @keyframes glow{0%,100%{opacity:.35}50%{opacity:1}}
+  @keyframes flick{0%,100%{opacity:1}45%{opacity:.55}55%{opacity:1}70%{opacity:.7}}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+  .spin{animation:spin 3.5s linear infinite}
+  .spin.slow{animation-duration:6s}
+  .puff{animation:rise 4s ease-out infinite;transform-box:fill-box;transform-origin:center}
+  .flow{stroke-dasharray:6 6;animation:flow .8s linear infinite}
+  .bob{animation:bob 2.4s ease-in-out infinite}
+  .ring{animation:ring 2.4s ease-out infinite;transform-box:fill-box;transform-origin:center}
+  .glow{animation:glow 1.6s ease-in-out infinite}
+  .flick{animation:flick 3s ease-in-out infinite}
+  .pulse{animation:pulse 2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+</style></head>
+<body>
+<div class="grid" id="g"></div>
+<script src="../core.js"></script>
+<script src="../iso.js"></script>
+<script src="../terrain.js"></script>
+<script>
+Assets.mountDefs();
+const g = document.getElementById('g');
+const tile = (title, vb, w, h, inner) => { const d = document.createElement('div'); d.className = 'tile'; d.innerHTML = `<h3>${title}</h3><svg viewBox="${vb}" width="${w}" height="${h}">${inner}</svg>`; g.appendChild(d); };
+const VB = '45 -5 330 225';
+tile('power()', VB, 495, 338, wrap(Assets.terrain.power()));
+tile('petro()', VB, 495, 338, wrap(Assets.terrain.petro()));
+tile('ptel()', VB, 495, 338, wrap(Assets.terrain.ptel()));
+tile('rea()', VB, 495, 338, wrap(Assets.terrain.rea()));
+tile('slab concrete + grid', VB, 330, 225, wrap(Assets.terrain.slab(95, 70, { top: 'concrete', grid: true })));
+tile('slab grass + earth', VB, 330, 225, wrap(Assets.terrain.slab(92, 66, { top: 'grass', earth: true })));
+tile('slab sand + earth brown', VB, 330, 225, wrap(Assets.terrain.slab(88, 70, { top: 'sand', earth: true, soil: 'brown' })));
+tile('slab tile', VB, 330, 225, wrap(Assets.terrain.slab(88, 70, { top: 'tile' })));
+// NOIC oblique tile
+const prevP = P;
+P = (x, y, z = 0) => [x - y * 0.55, y * 0.7 - z];
+let noic; try { noic = Assets.terrain.noic(); } finally { P = prevP; }
+tile('noic() — oblique', '-270 -110 540 185', 1000, 343, `<g>${noic}</g>`);
+</script>
+</body></html>

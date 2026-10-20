@@ -1,0 +1,60 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>houses preview</title>
+<style>
+  body{margin:0;background:#eef3f8;font-family:Segoe UI,Arial,sans-serif;color:#1d2b3a}
+  h3{margin:8px 12px;font-size:13px}
+  .grid{display:flex;flex-wrap:wrap;gap:10px;padding:10px}
+  .tile{background:#eef3f8;border:1px solid #d5dee8;border-radius:8px}
+  .tile p{margin:4px 8px;font-size:11px;color:#56677a}
+  svg{overflow:visible;display:block}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes rise{0%{transform:translateY(0) scale(.6);opacity:0}25%{opacity:.85}100%{transform:translateY(-40px) scale(1.5);opacity:0}}
+  @keyframes flow{to{stroke-dashoffset:-24}}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}
+  @keyframes ring{0%{transform:scale(.2);opacity:.9}100%{transform:scale(1.7);opacity:0}}
+  @keyframes glow{0%,100%{opacity:.35}50%{opacity:1}}
+  @keyframes flick{0%,100%{opacity:1}45%{opacity:.55}55%{opacity:1}70%{opacity:.7}}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+  .spin{animation:spin 3.5s linear infinite}
+  .spin.slow{animation-duration:6s}
+  .puff{animation:rise 4s ease-out infinite;transform-box:fill-box;transform-origin:center}
+  .flow{stroke-dasharray:6 6;animation:flow .8s linear infinite}
+  .bob{animation:bob 2.4s ease-in-out infinite}
+  .ring{animation:ring 2.4s ease-out infinite;transform-box:fill-box;transform-origin:center}
+  .glow{animation:glow 1.6s ease-in-out infinite}
+  .flick{animation:flick 3s ease-in-out infinite}
+  .pulse{animation:pulse 2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+</style>
+<script src="../core.js"></script><script src="../iso.js"></script><script src="../houses.js"></script>
+</head><body>
+<h3>Assets.houses preview</h3>
+<div class="grid" id="g"></div>
+<script>
+Assets.mountDefs();
+const H = Assets.houses, g = document.getElementById('g');
+const tile = (title, inner, w = 260, h = 200, tx = 130, ty = 120, sc = 2) => {
+  g.insertAdjacentHTML('beforeend', `<div class="tile"><p>${title}</p><svg width="${w}" height="${h}"><g transform="translate(${tx},${ty}) scale(${sc})">${inner}</g></svg></div>`);
+};
+const cream = ['#ffffff', '#f6e7c7', '#e3d1a8'];
+const roofs = [[C.red[0], '#d4693e', '#a8502d'], [C.red[0], '#4f9a5d', '#2f6b3a'], [C.red[0], '#3d8fcf', '#2a6fa5'], [C.red[0], '#d4693e', '#a8502d']];
+for (let v = 0; v < 4; v++) tile(`house variant ${v}`, H.house(-17, -11, 34, 22, 14, 12, v % 2 ? cream : C.white, roofs[v], v !== 2, v * .4, { variant: v }));
+tile('house variant 0 + yard', H.house(-17, -11, 34, 22, 14, 12, C.white, roofs[0], true, 0, { variant: 0, yard: true }));
+tile('house variant 2 + yard (carport)', H.house(-20, -11, 30, 20, 13, 11, C.white, roofs[2], true, 0, { variant: 2, yard: true }));
+tile('school', H.school(-18, -10), 300, 220, 150, 120, 2.2);
+tile('school (plain flag)', H.school(-18, -10, { flagColor: '#e04a3f' }), 300, 220, 150, 120, 2.2);
+tile('rondavel', H.rondavel(0, 0), 160, 160, 80, 100, 3);
+tile('rondavel lit', H.rondavel(0, 0, { lit: true, delay: .5 }), 160, 160, 80, 100, 3);
+// scene layout (positions from sceneRea)
+let sc = H.house(-62, -44, 38, 24, 16, 14, C.white, roofs[0], true, 0, { variant: 0 }) +
+  H.house(-4, -48, 34, 22, 14, 12, cream, roofs[1], true, .8, { variant: 1 }) +
+  H.house(44, -36, 30, 20, 13, 11, C.white, roofs[2], true, 1.5, { variant: 2 }) +
+  H.school(-92, 30) +
+  H.house(-40, 24, 32, 22, 13, 11, cream, roofs[3], true, .4, { variant: 3 }) +
+  H.rondavel(-8, 48, { lit: true });
+tile('REA layout', plate(92, 66, '#f3f8ef') + sc, 460, 300, 230, 140, 1.05);
+// oblique (NOIC) projection
+const P0 = P; P = (x, y, z = 0) => [x - y * 0.55, y * 0.7 - z];
+tile('oblique projection', H.house(-30, -10, 30, 20, 13, 11, C.white, roofs[1], true, 0, { variant: 1, yard: true }) + H.rondavel(22, 6, { lit: true }), 300, 200, 140, 120, 2);
+P = P0;
+</script>
+</body></html>

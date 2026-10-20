@@ -1,0 +1,52 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Silos preview</title>
+<style>
+body{background:#eef3f8;font-family:Segoe UI,Arial,sans-serif;margin:16px}
+.grid{display:flex;flex-wrap:wrap;gap:12px}
+.tile{background:#fff;border-radius:10px;padding:6px;box-shadow:0 1px 3px #0001}
+.tile h4{margin:2px 6px;font-size:12px;color:#456}
+svg{overflow:visible;display:block}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes rise{0%{transform:translateY(0) scale(.6);opacity:0}25%{opacity:.85}100%{transform:translateY(-40px) scale(1.5);opacity:0}}
+  @keyframes flow{to{stroke-dashoffset:-24}}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}
+  @keyframes ring{0%{transform:scale(.2);opacity:.9}100%{transform:scale(1.7);opacity:0}}
+  @keyframes glow{0%,100%{opacity:.35}50%{opacity:1}}
+  @keyframes flick{0%,100%{opacity:1}45%{opacity:.55}55%{opacity:1}70%{opacity:.7}}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+  .spin{animation:spin 3.5s linear infinite}
+  .spin.slow{animation-duration:6s}
+  .puff{animation:rise 4s ease-out infinite;transform-box:fill-box;transform-origin:center}
+  .flow{stroke-dasharray:6 6;animation:flow .8s linear infinite}
+  .bob{animation:bob 2.4s ease-in-out infinite}
+  .ring{animation:ring 2.4s ease-out infinite;transform-box:fill-box;transform-origin:center}
+  .glow{animation:glow 1.6s ease-in-out infinite}
+  .flick{animation:flick 3s ease-in-out infinite}
+  .pulse{animation:pulse 2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+</style></head><body>
+<div class="grid" id="g"></div>
+<script>window.Assets = { base: "../../" };</script><script src="../core.js"></script><script src="../iso.js"></script><script src="../silos.js"></script>
+<script>
+Assets.mountDefs();
+const g = document.getElementById('g');
+const only = new URLSearchParams(location.search).get('only');
+function tile(name, w, h, vb, inner){ if (only && !name.includes(only)) return; g.insertAdjacentHTML('beforeend', '<div class="tile"><h4>'+name+'</h4><svg width="'+w+'" height="'+h+'" viewBox="'+vb+'">'+inner+'</svg></div>'); }
+const S = Assets.silos;
+tile('silo concrete cone', 180, 270, '-30 -80 60 90', S.silo(0,0,{}));
+tile('silo steel cone', 180, 270, '-30 -80 60 90', S.silo(0,0,{color:'steel'}));
+tile('silo green dome', 180, 270, '-30 -80 60 90', S.silo(0,0,{color:'green',cone:false}));
+tile('silo steel r6 h34', 180, 270, '-30 -80 60 90', S.silo(0,0,{color:'steel',r:6,h:34}));
+tile('coalPile default', 260, 160, '-30 -25 60 37', S.coalPile(0,0,{}));
+tile('coalPile dust', 260, 160, '-30 -25 60 37', S.coalPile(0,0,{w:20,d:14,h:9,dust:true}));
+tile('battery (default)', 520, 460, '-60 -88 130 115', S.battery(0,0,{}));
+tile('battery steel, pile in front', 520, 460, '-60 -88 130 115', S.battery(0,0,{color:'steel',pileAt:[0,30]}));
+tile('battery in power plate', 720, 500, '-170 -130 340 240', plate(95,70) + S.battery(-45,25,{}));
+tile('coolingTower', 300, 360, '-45 -150 90 175', S.coolingTower(0,0,{}));
+tile('coolingTower small no steam', 220, 260, '-30 -80 60 95', S.coolingTower(0,0,{r:16,h:44,steam:false}));
+tile('stack + banded stack', 220, 360, '-25 -110 50 125', S.stack(-8,4,{}) + S.stack(8,-4,{bands:true,h:70}));
+tile('boilerHouse + duct + stack', 320, 320, '-50 -100 100 115', S.boilerHouse(-14,-10,24,18,38,{ductTo:[22,-1]}) + S.stack(22,-1,{h:70}));
+tile('plantSilos n4', 640, 460, '-75 -95 150 125', S.plantSilos(0,0,{}));
+tile('plantSilos n5', 640, 460, '-75 -95 150 125', S.plantSilos(0,0,{n:5}));
+tile('power plate layout (suggested)', 900, 640, '-175 -190 350 260', plate(95,70) + S.coolingTower(-58,-50,{r:16,h:48}) + S.stack(-37,-60,{h:76,bands:true}) + S.boilerHouse(-30,-68,16,14,34,{ductTo:[-37,-60]}) + box(-8,-50,0,28,34,26,C.white) + box(-8,-50,26,28,34,3,C.blue) + S.plantSilos(58,-48,{n:4}) + fence(26,-12,64,-12) + box(30,-6,0,8,8,9,C.grey));
+const prevP = P; P = (x, y, z = 0) => [x - y * 0.55, y * 0.7 - z];
+try { tile('plantSilos NOIC oblique', 640, 420, '-90 -90 180 125', S.plantSilos(0,0,{})); tile('coolingTower NOIC oblique', 300, 300, '-45 -140 90 165', S.coolingTower(0,0,{})); tile('battery NOIC oblique', 520, 420, '-70 -80 140 110', S.battery(0,0,{})); } finally { P = prevP; }
+</script></body></html>

@@ -1,0 +1,17 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Vehicle headings</title>
+<style>body{background:#eef3f8;margin:0;font:12px Segoe UI}svg{display:block}</style></head>
+<body>
+<svg id="t" width="1600" height="850" viewBox="-20 -20 200 120"></svg>
+<script>window.Assets = { base: '../../' };</script>
+<script src="../core.js"></script><script src="../iso.js"></script><script src="../cars.js"></script>
+<script>
+Assets.mountDefs();
+// columns: +x (dir 1), +y (mirror of dir 1), -x (dir -1), -y (mirror of dir -1)
+const rows = [{ livery: 'zetdc' }, { livery: 'moepd' }, { livery: 'zera' }, { livery: 'zetdc-truck' }, { type: 'minibus', color: '#f2c230' }];
+let s = '';
+rows.forEach((o, r) => [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(([d, m], c) => {
+  s += `<g transform="translate(${c * 45},${r * 22}) scale(${m},1)">${Assets.cars.car(Object.assign({ dir: d }, o))}</g>`;
+}));
+document.getElementById('t').innerHTML = s;
+</script></body></html>
