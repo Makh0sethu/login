@@ -281,6 +281,91 @@
     return `<g pointer-events="none">${s}</g>`;
   }
 
+  /* ---------- pylon inspection: pilots, charging pad, the drone and its mission ---------- */
+  A.addDefs(`<linearGradient id="en-scan" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3dffb0" stop-opacity=".6"/><stop offset="1" stop-color="#3dffb0" stop-opacity=".12"/></linearGradient>`);
+  // a ZETDC lineman (same overalls, vest and white hat as Assets.crew) flying the drone: 'remote' holds the controller,
+  // 'viewer' holds the monitor tablet and points up at the drone. Screen px around the feet.
+  function pilot(kind = 'remote', delay = 0) {
+    const arm = (a, b, c, d) => `<path d="M${a} ${b}L${c} ${d}" stroke="#2b3866" stroke-width="1.1" stroke-linecap="round" fill="none"/>`;
+    const leg = (x1, x2) => `<path d="M${x1 * .8} -4.6L${x2} -.4" stroke="#2b3866" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="${x2}" cy="-.4" rx=".9" ry=".5" fill="#23272c"/>`;
+    let g = `<ellipse rx="2.4" ry=".9" fill="#0b1e33" opacity=".18"/>` + leg(-1, -1) + leg(1, 1) +
+      `<rect x="-2" y="-8.6" width="4" height="4.4" rx="1" fill="#f08c2a"/><path d="M-2 -6.6h4" stroke="#fff3c4" stroke-width=".55"/><path d="M-2 -4.5h4" stroke="#3a2a1c" stroke-width=".6"/>`;
+    if (kind === 'remote') {
+      g += arm(-1.8, -8, -2.2, -6.2) + arm(1.8, -8, 2.2, -6.2) +
+        `<rect x="-3" y="-7.2" width="6" height="2.6" rx=".6" fill="#23272c"/><circle cx="-1.6" cy="-5.9" r=".7" fill="#7d8b99"/><circle cx="1.6" cy="-5.9" r=".7" fill="#7d8b99"/>` +
+        `<path d="M-2.4 -7.2L-3.4 -9.6M2.4 -7.2L3.4 -9.6" stroke="#23272c" stroke-width=".5"/><circle cx="3.4" cy="-9.8" r=".5" fill="#4f9a5d" class="glow" style="animation-delay:${delay}s"/>`;
+    } else {
+      g += arm(-1.8, -8, -2.2, -6) + arm(1.8, -8, 4.2, -12.4) + `<circle cx="4.2" cy="-12.4" r=".55" fill="#6f4428"/>` +
+        `<rect x="-5" y="-8" width="4.6" height="3.4" rx=".5" fill="#23272c"/><rect x="-4.6" y="-7.6" width="3.8" height="2.6" fill="#7fe0ff" class="glow" style="animation-delay:${delay}s"/>`;
+    }
+    return g + `<circle cy="-9.9" r="1.45" fill="#6f4428"/><path d="M-1.7 -10.3a1.7 1.6 0 0 1 3.4 0z" fill="#fff"/><path d="M-2.1 -10.3h4.2" stroke="#c9d3dd" stroke-width=".5"/>`;
+  }
+  // charging pad (local iso frame, centred on its anchor): a dark slab with yellow edge and a bolt
+  function dronePad() {
+    const [bx, by] = P(0, 0, .5);
+    return `<ellipse cy="1" rx="11" ry="5" fill="#0b1e33" opacity=".14"/>` +
+      poly([P(-8, -8, .4), P(8, -8, .4), P(8, 8, .4), P(-8, 8, .4)], '#56626f', 'stroke="#f2c230" stroke-width=".7"') +
+      poly([P(-6, -6, .5), P(6, -6, .5), P(6, 6, .5), P(-6, 6, .5)], '#3f4954') +
+      `<path d="M${f(bx + 1)} ${f(by - 3.6)}L${f(bx - 2.4)} ${f(by + .4)}H${f(bx)}L${f(bx - 1)} ${f(by + 3.6)}L${f(bx + 2.4)} ${f(by - .4)}H${f(bx)}Z" fill="#f2c230"/>`;
+  }
+  // the quadcopter in screen px around its body: rotors flicker, a camera ball hangs underneath
+  function droneBody() {
+    const rotor = (x, y, d) => `<g transform="translate(${x},${y})"><ellipse rx="5.2" ry="1.9" fill="#dfe7ef" opacity=".42"/>` +
+      `<g><path d="M-5 0H5" stroke="#3f4954" stroke-width=".7"/><animateTransform attributeName="transform" type="scale" values="1 1;.25 1;1 1" dur=".16s" begin="${d}s" repeatCount="indefinite"/></g><circle r=".8" fill="#56626f"/></g>`;
+    return `<path d="M-9 -2.6L9 2.6M9 -2.6L-9 2.6" stroke="#3f4954" stroke-width="1.3" stroke-linecap="round"/>` +
+      rotor(-9, -2.6, 0) + rotor(9, -2.6, .05) + rotor(-9, 2.6, .09) + rotor(9, 2.6, .02) +
+      `<path d="M-3.4 -1.8L0 -3.8L3.4 -1.8L3.4 1.2L0 3L-3.4 1.2Z" fill="#f4f7fa" stroke="#9aa9b8" stroke-width=".5"/><path d="M-3.4 -1.8L0 -.2L3.4 -1.8M0 -.2V3" stroke="#f08c2a" stroke-width=".7" fill="none"/>` +
+      `<path d="M0 3V4" stroke="#56626f" stroke-width=".8"/><circle cy="5" r="1.4" fill="#23272c" stroke="#7d8b99" stroke-width=".4"/><circle cx=".4" cy="5.2" r=".5" fill="#7fe0ff"/>` +
+      `<circle cx="-2.6" cy="2" r=".7" fill="#e04a3f" class="glow"/><circle cx="2.6" cy="2" r=".7" fill="#4f9a5d" class="glow" style="animation-delay:.5s"/>`;
+  }
+  /* The whole inspection as one looping SMIL timeline (every part shares it, so they stay in step): the drone sits on its
+     pad, rises, flies to each of o.pylons in turn and hovers over it while scanning, comes back, lands and charges for
+     2 s, lifts off again, flies away and fades out. Each pylon's top glows while it is scanned and stays lit, with a
+     tick, until the drone has gone. o.pad = [x, y], o.pylons = [[x, y], ...] (pylon height o.h), o.away = [x, y, z].
+     Returns SVG in screen px, to draw above the wires. */
+  function droneMission(o) {
+    const h = o.h || 46, Z = h + 18, [px, py] = o.pad, pyl = o.pylons, REST = 2.5;
+    const keys = [], k = (t, x, y, z) => keys.push([t, x, y, z]), hold = [];   // hold: [arrive, leave] over each pylon
+    k(0, px, py, REST); k(2, px, py, REST); k(5, px, py, Z);
+    let t = 5;
+    pyl.forEach(([x, y]) => { const ta = t + 2.4, te = ta + 2; k(ta, x, y, Z); k(te, x, y, Z); hold.push([ta, te]); t = te; });
+    const tBack = t + 6.5, tLand = tBack + 2.2, tCharged = tLand + 2, tUp = tCharged + 2, tGone = tUp + 5.2, DUR = Math.ceil(tGone + 5);
+    k(tBack, px, py, Z); k(tLand, px, py, REST); k(tCharged, px, py, REST); k(tUp, px, py, 36); k(tGone, ...o.away); k(DUR, ...o.away);
+    const kt = fr => fr.map(q => (q[0] / DUR).toFixed(4)).join(';');
+    const move = proj => `<animateTransform attributeName="transform" type="translate" calcMode="spline" values="${keys.map(q => proj(q).map(f).join(' ')).join(';')}" keyTimes="${kt(keys)}" keySplines="${Array(keys.length - 1).fill('.45 0 .55 1').join(';')}" dur="${DUR}s" repeatCount="indefinite"/>`;
+    // an attribute over time: [[t, value], ...], linear between points (two close times make a jump)
+    const track = (attr, pairs) => {
+      const ps = pairs.slice().sort((a, b) => a[0] - b[0]);
+      if (ps[0][0] > 0) ps.unshift([0, ps[0][1]]);
+      if (ps[ps.length - 1][0] < DUR) ps.push([DUR, ps[ps.length - 1][1]]);
+      return `<animate attributeName="${attr}" values="${ps.map(q => q[1]).join(';')}" keyTimes="${kt(ps)}" dur="${DUR}s" repeatCount="indefinite"/>`;
+    };
+    const charging = [[tLand, 0], [tLand + .3, 1], [tCharged - .2, 1], [tCharged + .2, 0]];
+    const flying = [[0, 0], [.6, 1], [tGone - 1.8, 1], [tGone, 0]];
+    const lit = tUp + 1;      // the highlights fade once the drone is up and away
+    let s = `<ellipse rx="7" ry="2.6" fill="#0b1e33" opacity="0">${track('opacity', flying.map(([a, v]) => [a, v * .16]))}${move(q => P(q[1], q[2], 0))}</ellipse>`;
+    // glowing pylon tops: a scan box while the drone is over it, then a steady glow and a tick
+    pyl.forEach(([x, y], i) => {
+      const [ta, te] = hold[i], arms = `M-2.9 -${h - 16}L-1.2 -${h}M2.9 -${h - 16}L1.2 -${h}M-11 -${h - 8}H11M-8 -${h - 2}H8`;
+      const scanning = [[ta - .2, 0], [ta + .3, 1], [ta + .7, .5], [ta + 1.1, 1], [ta + 1.5, .55], [te, .85], [lit, .85], [lit + 1.6, 0]];
+      const ticked = [[te - .2, 0], [te + .3, 1], [lit, 1], [lit + 1.6, 0]];
+      s += T(x, y, 0, `<g opacity="0">${track('opacity', scanning)}` +
+        `<rect x="-13" y="${-(h + 5)}" width="26" height="22" rx="6" fill="#3dffb0" fill-opacity=".2" stroke="#3dffb0" stroke-width=".9" stroke-dasharray="3 2"/>` +
+        `<path d="${arms}" stroke="#3dffb0" stroke-width="2" stroke-linecap="round" fill="none"/><path d="${arms}" stroke="#fff" stroke-width=".6" stroke-linecap="round" fill="none"/>` +
+        `<circle cx="-11" cy="-${h - 8}" r="1.9" fill="#fff" stroke="#3dffb0" stroke-width=".8"/><circle cx="11" cy="-${h - 8}" r="1.9" fill="#fff" stroke="#3dffb0" stroke-width=".8"/>` +
+        `<path d="M-13 0H13" stroke="#fff" stroke-width=".9" opacity=".9"><animateTransform attributeName="transform" type="translate" values="0 -${h + 4};0 -${h - 16};0 -${h + 4}" dur=".9s" repeatCount="indefinite"/></path></g>` +
+        `<g opacity="0" transform="translate(18,-${h + 6})">${track('opacity', ticked)}<circle r="4.2" fill="#2fbf71" stroke="#fff" stroke-width=".8"/><path d="M-2 0l1.5 1.6 2.8-3.2" stroke="#fff" stroke-width="1.1" fill="none" stroke-linecap="round"/></g>`);
+    });
+    // charging ring on the pad
+    s += T(px, py, 0, `<ellipse rx="9" ry="4.4" fill="none" stroke="#ffd34d" stroke-width="1.2" opacity="0">${track('opacity', charging)}<animate attributeName="rx" values="6;11;6" dur=".8s" repeatCount="indefinite"/><animate attributeName="ry" values="3;5.3;3" dur=".8s" repeatCount="indefinite"/></ellipse>`);
+    // the drone: follows the keyframes, bobs, shows its scan beam while hovering and a bolt while charging
+    const beam = hold.flatMap(([a, b]) => [[a - .2, 0], [a + .3, 1], [b - .1, 1], [b + .2, 0]]);
+    s += `<g opacity="0">${track('opacity', flying)}${move(q => P(q[1], q[2], q[3]))}<g class="bob" style="animation-duration:1.6s">` +
+      `<path d="M-2 4L-13 19Q0 24 13 19L2 4Z" fill="url(#en-scan)" opacity="0">${track('opacity', [[0, 0]].concat(beam))}</path>` + droneBody() +
+      `<path d="M1 -8L-3 -1.6H-.4L-1.4 5L3 -2H.4Z" fill="#ffd34d" stroke="#b8860b" stroke-width=".4" opacity="0">${track('opacity', charging)}</path></g></g>`;
+    return s;
+  }
+
   A.energy = { windTurbine, solarFarm, hydroHouse, biogas, substation, pole, poleWires, drop, satellite, satBeam, POLE_H,
-    dish, collector, COLLECTOR_TOP, booster, BOOSTER, link };
+    dish, collector, COLLECTOR_TOP, booster, BOOSTER, link, pilot, dronePad, droneMission };
 })();
