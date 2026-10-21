@@ -1,0 +1,17 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Rail preview</title>
+<style>body{background:#eef3f8;margin:0}svg{display:block}</style></head>
+<body>
+<svg id="t" width="1600" height="850" viewBox="-130 -70 260 140"></svg>
+<script>window.Assets = { base: '../../' };</script>
+<script src="../../core.js"></script><script src="../../iso.js"></script><script src="../cars.js"></script><script src="../roads.js"></script>
+<script>
+Assets.mountDefs();
+const R = Assets.roads;
+// iso coal train along +y, oblique fuel train along +x
+let s = `<g transform="translate(-60,-40)">${R.track(1, 0, -90, 60)}${R.train(1, 'coal').svg}</g>`;
+const base = P; P = (x, y, z = 0) => [x - y * 0.55, y * 0.7 - z];
+s += `<g transform="translate(40,30)">${R.track(0, 0, -90, 60)}${R.train(0, 'fuel').svg}</g>`;
+P = base;
+document.getElementById('t').innerHTML = s;
+</script></body></html>

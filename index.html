@@ -12,7 +12,7 @@
   html,body{height:100%}
   body{font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:var(--ink);background:#8cc55c;overflow:hidden}
 
-  /* full-bleed landscape behind everything (built by assets/map.js) */
+  /* full-bleed landscape behind everything (built by src/map.js) */
   #map{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
 
   .page{position:relative;z-index:1;height:100vh;height:100dvh;display:grid;grid-template-rows:auto 1fr auto;pointer-events:none}
@@ -22,8 +22,9 @@
   header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px clamp(14px,2.5vw,36px) 14px;
     background:linear-gradient(180deg,rgba(236,246,228,.94),rgba(236,246,228,.78) 70%,rgba(236,246,228,0));}
   .badge{flex:none;width:68px;height:68px;border-radius:50%;background:#fff;border:2px solid #fff;
-    box-shadow:0 4px 14px rgba(20,50,80,.18);display:grid;place-items:center;overflow:hidden}
-  .badge img{width:100%;height:100%;object-fit:contain;padding:5px}
+    box-shadow:0 4px 14px rgba(20,50,80,.18);position:relative;overflow:hidden}
+  /* pinned to the badge box, so a tall or wide image can't stretch the badge */
+  .badge img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:5px}
   .badge.crest{border-radius:10px;width:200px;height:148px;background:transparent;box-shadow:none;border:0}
   .badge.crest img{padding:0}
   .badge.seal{width:152px;height:152px}
@@ -52,10 +53,11 @@
   /* footer logos on a glass bar */
   footer{display:flex;justify-content:space-around;align-items:flex-start;gap:10px;margin:0 clamp(8px,6vw,120px) 10px;padding:10px 2% 8px;
     background:rgba(255,255,255,.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.7);border-radius:16px;box-shadow:0 8px 24px rgba(20,50,80,.15)}
-  footer .ent{display:flex;flex-direction:column;align-items:center;gap:6px;text-decoration:none;color:var(--ink);width:124px}
+  footer .ent{display:flex;flex-direction:column;align-items:center;gap:6px;text-decoration:none;color:var(--ink);flex:1 1 0;min-width:0;max-width:124px}
   footer .ent span{font-size:.68rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;text-align:center}
-  footer .badge{width:104px;height:104px;transition:transform .25s}
-  footer .badge img{padding:9px}
+  /* badges shrink with the bar; 15% padding keeps every logo inside the square that fits the circle, so no corner is cut */
+  footer .badge{width:100%;max-width:104px;height:auto;aspect-ratio:1;transition:transform .25s}
+  footer .badge img{padding:15%}
   footer .ent:hover .badge{transform:translateY(-5px) scale(1.06)}
 
   /* ---- animations used by the map ---- */
@@ -84,8 +86,8 @@
     .badge.crest{width:96px;height:72px}
     .badge.seal{width:76px;height:76px}
     footer{flex-wrap:wrap;justify-content:center;margin:0 8px 8px}
-    footer .ent{width:84px}
-    footer .badge{width:68px;height:68px}
+    footer .ent{flex:none;width:84px}
+    footer .badge{max-width:68px}
   }
   @media (max-height:640px){ body{overflow:auto} .page{height:auto;min-height:100vh} }
 </style>
@@ -95,12 +97,12 @@
 
 <div class="page">
   <header>
-    <div class="badge crest" title="Government of Zimbabwe"><img src="logos/coat of arms.png" alt="Zimbabwe coat of arms"></div>
+    <div class="badge crest" title="Government of Zimbabwe"><img src="logos/coat-of-arms.png" alt="Zimbabwe coat of arms"></div>
     <div class="titles">
       <h1>Ministry of Energy and Power Development</h1>
       <h2>Spatial Data Infrastructure System</h2>
     </div>
-    <div class="badge seal" title="Ministry of Energy &amp; Power Development"><img src="logos/moepd logp.png" alt="Ministry of Energy and Power Development"></div>
+    <div class="badge seal" title="Ministry of Energy &amp; Power Development"><img src="logos/moepd.png" alt="Ministry of Energy and Power Development"></div>
   </header>
 
   <main>
@@ -115,30 +117,34 @@
   </main>
 
   <footer>
-    <a class="ent" href="#"><div class="badge"><img src="logos/Logo-ZESA-1.png" alt="ZESA"></div><span>ZESA Pvt Ltd</span></a>
+    <a class="ent" href="#"><div class="badge"><img src="logos/zesa.png" alt="ZESA"></div><span>ZESA Pvt Ltd</span></a>
     <a class="ent" href="#"><div class="badge"><img src="logos/powertel.png" alt="Powertel"></div><span>Powertel</span></a>
     <a class="ent" href="#"><div class="badge"><img src="logos/zent.png" alt="ZENT"></div><span>ZENT</span></a>
     <a class="ent" href="#"><div class="badge"><img src="logos/zera.png" alt="ZERA"></div><span>ZERA</span></a>
     <a class="ent" href="#"><div class="badge"><img src="logos/ref.png" alt="REF"></div><span>REF</span></a>
     <a class="ent" href="#"><div class="badge"><img src="logos/noic.png" alt="NOIC"></div><span>NOIC</span></a>
     <a class="ent" href="#"><div class="badge"><img src="logos/petrotrade.png" alt="Petrotrade"></div><span>Petrotrade</span></a>
+    <a class="ent" href="#"><div class="badge"><img src="logos/SAP.png" alt="SAPP"></div><span>SAPP</span></a>
   </footer>
 </div>
 
-<script src="assets/core.js"></script>
-<script src="assets/iso.js"></script>
-<script src="assets/terrain.js"></script>
-<script src="assets/textures.js"></script>
-<script src="assets/silos.js"></script>
-<script src="assets/marine.js"></script>
-<script src="assets/trucks.js"></script>
-<script src="assets/cars.js"></script>
-<script src="assets/houses.js"></script>
-<script src="assets/buildings.js"></script>
-<script src="assets/tanks.js"></script>
-<script src="assets/exports-manifest.js"></script>
-<script src="assets/exports.js"></script>
-<script src="assets/map.js"></script>
+<script src="src/core.js"></script>
+<script src="src/iso.js"></script>
+<script src="src/assets/terrain.js"></script>
+<script src="src/assets/textures.js"></script>
+<script src="src/assets/silos.js"></script>
+<script src="src/assets/marine.js"></script>
+<script src="src/assets/trucks.js"></script>
+<script src="src/assets/cars.js"></script>
+<script src="src/assets/houses.js"></script>
+<script src="src/assets/buildings.js"></script>
+<script src="src/assets/tanks.js"></script>
+<script src="src/assets/energy.js"></script>
+<script src="src/assets/crew.js"></script>
+<script src="art/manifest.js"></script>
+<script src="src/exports.js"></script>
+<script src="src/map.js"></script>
+<script src="src/debug.js"></script>
 <script>
 Assets.mountDefs();
 document.getElementById('map').innerHTML = Assets.map.render();

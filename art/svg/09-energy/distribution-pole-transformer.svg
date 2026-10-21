@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="-11.6 -30 23.2 37.2" xmlns="http://www.w3.org/2000/svg" width="93" height="149"><style>
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes rise{0%{transform:translateY(0) scale(.6);opacity:0}25%{opacity:.85}100%{transform:translateY(-40px) scale(1.5);opacity:0}}
+@keyframes flow{to{stroke-dashoffset:-24}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}
+@keyframes ring{0%{transform:scale(.2);opacity:.9}100%{transform:scale(1.7);opacity:0}}
+@keyframes glow{0%,100%{opacity:.35}50%{opacity:1}}
+.spin{animation:spin 3.5s linear infinite}
+.puff{animation:rise 4s ease-out infinite;transform-box:fill-box;transform-origin:center}
+.flow{stroke-dasharray:6 6;animation:flow .8s linear infinite}
+.bob{animation:bob 2.4s ease-in-out infinite}
+.ring{animation:ring 2.4s ease-out infinite;transform-box:fill-box;transform-origin:center}
+.glow{animation:glow 1.6s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style><defs></defs><g transform="translate(0.0,0.0)" ><ellipse rx="3" ry="1.2" fill="#0b1e33" opacity=".14"/><path d="M0 0V-24" stroke="#7a5a3a" stroke-width="1.5"/><path d="M.4 0V-24" stroke="#5f442b" stroke-width=".5"/><path d="M-5.5 -22H5.5" stroke="#6e5034" stroke-width="1.2"/><rect x="-5.6" y="-23.8" width="1.2" height="1.6" rx=".4" fill="#e9eef3"/><rect x="-0.6" y="-23.8" width="1.2" height="1.6" rx=".4" fill="#e9eef3"/><rect x="4.4" y="-23.8" width="1.2" height="1.6" rx=".4" fill="#e9eef3"/><rect x="-3.4" y="-18" width="6.8" height="7.5" rx="1.6" fill="#b2bfcc" stroke="#7d8b99" stroke-width=".5"/><rect x="-3.4" y="-17" width="2.6" height="5.5" fill="#dfe7ef" opacity=".7"/><path d="M-1.6 -18V-19.8M1.6 -18V-19.8" stroke="#e9eef3" stroke-width="1"/><circle cy="-14.5" r="1.1" fill="#ffcf4d" class="glow" style="animation-delay:0s"/></g></svg>
