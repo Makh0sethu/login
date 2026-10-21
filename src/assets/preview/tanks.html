@@ -1,0 +1,44 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Tanks preview</title>
+<style>
+body{background:#eef3f8;font-family:Segoe UI,Arial,sans-serif;margin:16px}
+.grid{display:flex;flex-wrap:wrap;gap:12px}
+.tile{background:#fff;border-radius:10px;padding:6px;box-shadow:0 1px 3px #0001}
+.tile h4{margin:2px 6px;font-size:12px;color:#456}
+svg{overflow:visible;display:block}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes rise{0%{transform:translateY(0) scale(.6);opacity:0}25%{opacity:.85}100%{transform:translateY(-40px) scale(1.5);opacity:0}}
+  @keyframes flow{to{stroke-dashoffset:-24}}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}
+  @keyframes ring{0%{transform:scale(.2);opacity:.9}100%{transform:scale(1.7);opacity:0}}
+  @keyframes glow{0%,100%{opacity:.35}50%{opacity:1}}
+  @keyframes flick{0%,100%{opacity:1}45%{opacity:.55}55%{opacity:1}70%{opacity:.7}}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+  .spin{animation:spin 3.5s linear infinite}
+  .spin.slow{animation-duration:6s}
+  .puff{animation:rise 4s ease-out infinite;transform-box:fill-box;transform-origin:center}
+  .flow{stroke-dasharray:6 6;animation:flow .8s linear infinite}
+  .bob{animation:bob 2.4s ease-in-out infinite}
+  .ring{animation:ring 2.4s ease-out infinite;transform-box:fill-box;transform-origin:center}
+  .glow{animation:glow 1.6s ease-in-out infinite}
+  .flick{animation:flick 3s ease-in-out infinite}
+  .pulse{animation:pulse 2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+</style></head><body>
+<div class="grid" id="g"></div>
+<script>window.Assets = { base: '../../' };</script>
+<script src="../../core.js"></script><script src="../../iso.js"></script><script src="../tanks.js"></script>
+<script>
+Assets.mountDefs();
+const g = document.getElementById('g');
+const only = new URLSearchParams(location.search).get('only');
+function tile(name, w, h, vb, inner){ if (only && !name.includes(only)) return; g.insertAdjacentHTML('beforeend', '<div class="tile"><h4>'+name+'</h4><svg width="'+w+'" height="'+h+'" viewBox="'+vb+'">'+inner+'</svg></div>'); }
+const S = Assets.tanks;
+function obl(fn){ const prevP = P; P = (x, y, z = 0) => [x - y * 0.55, y * 0.7 - z]; try { return fn(); } finally { P = prevP; } }
+tile('NOIC oblique tank 32 PETROL', 400, 400, '-22 -34 40 40', obl(() => S.tank(0,0,{num:32})));
+tile('oblique r14 h30 DIESEL', 400, 400, '-26 -44 50 50', obl(() => S.tank(0,0,{r:14,h:30,num:7,product:'DIESEL'})));
+tile('iso tank', 300, 300, '-22 -36 44 44', S.tank(0,0,{num:12,product:'JET A1'}));
+tile('oblique grey, no logo, no stairs', 300, 300, '-22 -34 40 40', obl(() => S.tank(0,0,{color:'grey',logo:false,stairs:false,num:5})));
+tile('Beira farm (oblique)', 560, 420, '-180 -60 90 70', obl(() => S.farm([[-146,-24,11,22,31,'PETROL'],[-122,-24,11,22,32,'PETROL']]) + S.farm([[-146,10,11,22,33,'DIESEL'],[-122,10,11,22,34,'DIESEL',{color:'grey'}]])));
+tile('Feruka farm (oblique)', 600, 420, '25 -70 105 80', obl(() => S.farm([[66,-26,14,30,1,'PETROL'],[92,-26,11,24,2,'DIESEL']]) + S.farm([[66,10,11,22,3,'JET A1'],[92,10,11,22,4,'DIESEL',{color:'grey'}]])));
+tile('Msasa farm (oblique)', 360, 420, '130 -65 60 80', obl(() => S.farm([[166,-26,11,22,1,'PETROL']]) + S.farm([[166,10,11,22,2,'DIESEL',{color:'grey'}]])));
+tile('iso farm 2x2', 500, 400, '-70 -60 130 100', S.farm([[-12,-12,11,22,1],[12,-12,11,22,2],[-12,12,11,22,3,'DIESEL'],[12,12,11,22,4,'DIESEL']]));
+</script></body></html>

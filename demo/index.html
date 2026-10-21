@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="robots" content="noindex, nofollow">
+<title>Energy Map Demo</title>
+<link rel="icon" href="data:,">
+<style>
+  *{box-sizing:border-box;margin:0}
+  html,body{height:100%}
+  body{font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;background:#8cc55c;overflow:hidden;overscroll-behavior:none}
+
+  /* the landscape (built by src/map.js); the viewBox is driven by the pan/zoom script below */
+  #map{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab;transform-origin:0 0;user-select:none;-webkit-user-select:none}
+  #map.drag{cursor:grabbing}
+  #map.still{will-change:transform}
+  /* still = a gesture is running (nothing animates, so the moving picture never has to be redrawn);
+     far = zoomed out past "fills the screen", where these effects are under a pixel; cull = off screen */
+  #map.still *,#map.far .flick,#map.far .glow,#map.far .flow,#map.far .puff,#map.far .ring,#map.far .pulse{animation-play-state:paused!important}
+  #map .cull{display:none!important}
+
+  .zoom{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:6px;z-index:2}
+  .zoom button{width:44px;height:44px;border-radius:12px;border:1px solid rgba(255,255,255,.85);background:rgba(255,255,255,.7);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 6px 18px rgba(20,50,80,.2);
+    font:600 22px/1 inherit;color:#1d2b3a;cursor:pointer;display:grid;place-items:center}
+  .zoom button:hover{background:#fff}
+  .zoom button svg{width:20px;height:20px}
+  .hint{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:2;padding:8px 14px;border-radius:999px;
+    background:rgba(255,255,255,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#1d2b3a;font-size:.8rem;
+    box-shadow:0 6px 18px rgba(20,50,80,.18);transition:opacity .6s;pointer-events:none;white-space:nowrap}
+  .hint.off{opacity:0}
+
+  /* ---- animations used by the map ---- */
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes rise{0%{transform:translateY(0) scale(.6);opacity:0}25%{opacity:.85}100%{transform:translateY(-40px) scale(1.5);opacity:0}}
+  @keyframes flow{to{stroke-dashoffset:-24}}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.5px)}}
+  @keyframes ring{0%{transform:scale(.2);opacity:.9}100%{transform:scale(1.7);opacity:0}}
+  @keyframes glow{0%,100%{opacity:.35}50%{opacity:1}}
+  @keyframes flick{0%,100%{opacity:1}45%{opacity:.55}55%{opacity:1}70%{opacity:.7}}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+  .spin{animation:spin 3.5s linear infinite}
+  .spin.slow{animation-duration:6s}
+  .puff{animation:rise 4s ease-out infinite;transform-box:fill-box;transform-origin:center}
+  .flow{stroke-dasharray:6 6;animation:flow .8s linear infinite}
+  .bob{animation:bob 2.4s ease-in-out infinite}
+  .ring{animation:ring 2.4s ease-out infinite;transform-box:fill-box;transform-origin:center}
+  .glow{animation:glow 1.6s ease-in-out infinite}
+  .flick{animation:flick 3s ease-in-out infinite}
+  .pulse{animation:pulse 2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+  @keyframes drift{0%{transform:translate(-1000px,-120px);opacity:0}6%,94%{opacity:1}100%{transform:translate(1000px,120px);opacity:0}}
+  .drift{animation:drift 110s linear infinite}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<svg id="map" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid meet" aria-label="Isometric energy sector map" role="img"></svg>
+
+<div class="zoom">
+  <button type="button" id="zin" title="Zoom in" aria-label="Zoom in">+</button>
+  <button type="button" id="zout" title="Zoom out" aria-label="Zoom out">&minus;</button>
+  <button type="button" id="zfit" title="Reset view" aria-label="Reset view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+</div>
+<div class="hint" id="hint">Drag to pan &middot; scroll or pinch to zoom</div>
+
+<script src="src/core.js"></script>
+<script src="src/iso.js"></script>
+<script src="src/assets/terrain.js"></script>
+<script src="src/assets/textures.js"></script>
+<script src="src/assets/silos.js"></script>
+<script src="src/assets/marine.js"></script>
+<script src="src/assets/trucks.js"></script>
+<script src="src/assets/cars.js"></script>
+<script src="src/assets/houses.js"></script>
+<script src="src/assets/buildings.js"></script>
+<script src="src/assets/tanks.js"></script>
+<script src="src/assets/energy.js"></script>
+<script src="src/assets/crew.js"></script>
+<script src="art/manifest.js"></script>
+<script src="src/exports.js"></script>
+<script src="src/map.js"></script>
+<script>
+(function () {
+Assets.mountDefs();
+const svg = document.getElementById('map');
+// clipped to the 1600 x 1000 frame, so nothing spills past the map edge when zoomed out
+svg.innerHTML = `<defs><clipPath id="map-frame"><rect width="1600" height="1000"/></clipPath></defs><g clip-path="url(#map-frame)">${Assets.map.render()}</g>`;
+
+/* ---------- pan + zoom ----------
+   The view is a viewBox with the screen's aspect ratio: s = screen px per map unit, (vx, vy) = map point at the top-left.
+   Zoom runs from "whole map fits" (contain) up to MAXZ x "map fills the screen" (cover). The view is clamped so the map
+   never leaves the screen; when it is smaller than the screen on one axis it is centred on that axis.
+   The SVG is drawn M of a screen bigger on every side than the screen. While a finger, mouse or wheel is moving, the
+   change is shown as a CSS transform of the last drawn view (GPU only, so phones stay smooth), revealing that margin
+   instead of blank ground; animations are frozen meanwhile, so the moving picture never needs redrawing. Only if the
+   gesture runs past the margin is it drawn again mid-gesture, and it is drawn sharp when the gesture ends.
+   Positions use clientX/Y, because Safari measures offsetX from the SVG shape under the finger, not from the map. */
+const MW = 1600, MH = 1000, MAXZ = 6, M = .5;
+let W, H, s, vx, vy, raf = 0, live = 0, idle = 0, cs, cvx, cvy;
+const cover = () => Math.max(W / MW, H / MH), contain = () => Math.min(W / MW, H / MH);
+function clamp() {
+  s = Math.min(Math.max(s, contain()), cover() * MAXZ);
+  const vw = W / s, vh = H / s;
+  vx = vw >= MW ? (MW - vw) / 2 : Math.min(Math.max(vx, 0), MW - vw);
+  vy = vh >= MH ? (MH - vh) / 2 : Math.min(Math.max(vy, 0), MH - vh);
+}
+function place() {
+  Object.assign(svg.style, { left: -M * W + 'px', top: -M * H + 'px', width: W * (1 + 2 * M) + 'px', height: H * (1 + 2 * M) + 'px', transformOrigin: `${M * W}px ${M * H}px` });
+}
+function paint() {
+  cs = s; cvx = vx; cvy = vy; svg.style.transform = '';
+  svg.setAttribute('viewBox', [vx - M * W / s, vy - M * H / s, W * (1 + 2 * M) / s, H * (1 + 2 * M) / s].map(n => n.toFixed(2)).join(' '));
+  if (units) cull();
+}
+function commit() {
+  paint();
+  svg.classList.toggle('far', s < cover() * .999);
+  svg.classList.remove('still'); svg.unpauseAnimations();
+}
+
+/* ---------- off-screen animations ----------
+   Every animated piece (a CSS-animated element, or the parent of a SMIL animation) gets map-space bounds once, at the
+   first view: its own box, grown by its motion path (animateMotion) or translate values (animateTransform). After each
+   gesture, pieces more than 60% of a screen outside the view (past the drawn margin) are set display:none, so the browser stops animating them.
+   SMIL keeps its clock while hidden, so vehicles come back at the right spot. The drifting clouds cross the whole map
+   and are never culled. */
+let units = null;
+const ANIM = /(^|\s)(spin|puff|flow|bob|ring|glow|flick|pulse)(\s|$)/;
+function measure() {
+  const set = new Set();
+  svg.querySelectorAll('animate,animateTransform,animateMotion,set').forEach(a => set.add(a.parentNode));
+  svg.querySelectorAll('[class],[style*="animation"]').forEach(e => { if (ANIM.test(e.getAttribute('class') || '') || /animation/.test(e.getAttribute('style') || '')) set.add(e); });
+  const tmp = [];
+  units = [...set].filter(e => e !== svg && !e.closest('.drift,defs,clipPath,pattern')).map(el => {
+    const r = el.getBoundingClientRect(); let [x0, y0, x1, y1] = [r.left, r.top, r.right, r.bottom];
+    const grow = q => { x0 = Math.min(x0, q.left - r.width); y0 = Math.min(y0, q.top - r.height); x1 = Math.max(x1, q.right + r.width); y1 = Math.max(y1, q.bottom + r.height); };
+    for (const a of el.children) {
+      if (a.tagName === 'animateMotion') {
+        const mp = a.querySelector('mpath'), ref = mp && (mp.getAttribute('href') || mp.getAttribute('xlink:href'));
+        let path = ref && svg.querySelector(ref);
+        if (!path && a.getAttribute('path')) { path = document.createElementNS('http://www.w3.org/2000/svg', 'path'); path.setAttribute('d', a.getAttribute('path')); el.parentNode.appendChild(path); tmp.push(path); }
+        if (path) grow(path.getBoundingClientRect());
+      } else if (a.tagName === 'animateTransform' && a.getAttribute('type') === 'translate') {
+        const n = [a.getAttribute('values'), a.getAttribute('from'), a.getAttribute('to'), a.getAttribute('by')].join(';').split(';')
+          .map(v => v.trim().split(/[\s,]+/).map(Number)).filter(v => !isNaN(v[0]));
+        const sx = n.map(v => v[0] * cs), sy = n.map(v => (v[1] || 0) * cs);
+        if (n.length) { x0 += Math.min(0, ...sx); x1 += Math.max(0, ...sx); y0 += Math.min(0, ...sy); y1 += Math.max(0, ...sy); }
+      }
+    }
+    return { el, off: false, b: [cvx + x0 / cs, cvy + y0 / cs, cvx + x1 / cs, cvy + y1 / cs] };
+  });
+  tmp.forEach(p => p.remove());
+}
+function cull() {
+  const mx = W / s * (M + .1), my = H / s * (M + .1), x0 = vx - mx, y0 = vy - my, x1 = vx + W / s + mx, y1 = vy + H / s + my;
+  for (const u of units) {
+    const off = u.b[2] < x0 || u.b[0] > x1 || u.b[3] < y0 || u.b[1] > y1;
+    if (off !== u.off) { u.off = off; u.el.classList.toggle('cull', off); }
+  }
+}
+function draw() {
+  raf = 0;
+  if (!live) return commit();
+  const k = s / cs, tx = (cvx - vx) * s, ty = (cvy - vy) * s;
+  // the drawn area must still cover the screen; if not, draw it again (animations stay frozen)
+  if (tx - M * W * k > 0 || tx + (W + M * W) * k < W || ty - M * H * k > 0 || ty + (H + M * H) * k < H) return paint();
+  svg.style.transform = `translate(${tx.toFixed(1)}px,${ty.toFixed(1)}px) scale(${k.toFixed(4)})`;
+}
+function update() { clamp(); if (!raf) raf = requestAnimationFrame(draw); }
+// start / end a gesture; a wheel burst ends itself after a short pause
+function begin() { if (!live++) { svg.classList.add('still'); svg.pauseAnimations(); } }
+function end() { live = Math.max(0, live - 1); update(); }
+function wheelLive() { if (!idle) begin(); clearTimeout(idle); idle = setTimeout(() => { idle = 0; end(); }, 160); }
+function fit() { s = cover(); vx = (MW - W / s) / 2; vy = (MH - H / s) / 2; update(); }
+// zoom by factor k keeping the map point under screen (px, py) fixed
+function zoomAt(k, px, py) { const mx = vx + px / s, my = vy + py / s; s *= k; clamp(); vx = mx - px / s; vy = my - py / s; update(); }
+function size() {
+  const first = W === undefined;
+  const cx = first ? 0 : vx + W / 2 / s, cy = first ? 0 : vy + H / 2 / s, rel = first ? 1 : s / cover();
+  W = innerWidth; H = innerHeight; place();
+  if (first) { fit(); clamp(); commit(); measure(); return cull(); }
+  s = cover() * rel; vx = cx - W / 2 / s; vy = cy - H / 2 / s; update();
+}
+size();
+addEventListener('resize', size);
+
+const hint = document.getElementById('hint');
+const used = () => hint.classList.add('off');
+setTimeout(used, 6000);
+
+svg.addEventListener('wheel', e => {
+  e.preventDefault(); used(); wheelLive();
+  const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+  zoomAt(Math.exp(-d * .0015), e.clientX, e.clientY);
+}, { passive: false });
+// stop iOS Safari zooming the whole page on a pinch
+['gesturestart', 'gesturechange'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
+
+// one pointer pans, two pointers pinch-zoom around their midpoint
+const fingers = new Map();
+let last = null;
+const xy = e => ({ x: e.clientX, y: e.clientY });
+const mid = () => { const [a, b] = [...fingers.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) }; };
+svg.addEventListener('pointerdown', e => {
+  if (fingers.size >= 2) return;
+  try { svg.setPointerCapture(e.pointerId); } catch (_) {}
+  if (!fingers.size) begin();
+  fingers.set(e.pointerId, xy(e));
+  last = fingers.size === 2 ? mid() : xy(e); svg.classList.add('drag'); used();
+});
+svg.addEventListener('pointermove', e => {
+  if (!fingers.has(e.pointerId)) return;
+  fingers.set(e.pointerId, xy(e));
+  if (fingers.size === 1) { const p = xy(e); vx -= (p.x - last.x) / s; vy -= (p.y - last.y) / s; last = p; update(); }
+  else {
+    const m = mid();
+    vx -= (m.x - last.x) / s; vy -= (m.y - last.y) / s;
+    if (last.d) zoomAt(m.d / last.d, m.x, m.y); else update();
+    last = m;
+  }
+});
+function up(e) {
+  if (!fingers.delete(e.pointerId)) return;
+  if (fingers.size === 1) last = { ...[...fingers.values()][0] };
+  if (!fingers.size) { svg.classList.remove('drag'); end(); }
+}
+svg.addEventListener('pointerup', up);
+svg.addEventListener('pointercancel', up);
+svg.addEventListener('dblclick', e => zoomAt(e.shiftKey ? 1 / 2 : 2, e.clientX, e.clientY));
+
+document.getElementById('zin').addEventListener('click', () => zoomAt(1.5, W / 2, H / 2));
+document.getElementById('zout').addEventListener('click', () => zoomAt(1 / 1.5, W / 2, H / 2));
+document.getElementById('zfit').addEventListener('click', fit);
+addEventListener('keydown', e => {
+  if (e.key === '+' || e.key === '=') zoomAt(1.5, W / 2, H / 2);
+  else if (e.key === '-') zoomAt(1 / 1.5, W / 2, H / 2);
+  else if (e.key === '0') fit();
+});
+})();
+</script>
+</body>
+</html>
