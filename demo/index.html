@@ -30,6 +30,12 @@
     background:rgba(255,255,255,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#1d2b3a;font-size:.8rem;
     box-shadow:0 6px 18px rgba(20,50,80,.18);transition:opacity .6s;pointer-events:none;white-space:nowrap}
   .hint.off{opacity:0}
+  /* name of the scene the tour is zoomed into */
+  .caption{position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:2;padding:8px 16px;border-radius:999px;
+    background:rgba(255,255,255,.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#1d2b3a;font-size:.85rem;font-weight:600;
+    box-shadow:0 6px 18px rgba(20,50,80,.18);transition:opacity .8s;pointer-events:none;white-space:nowrap;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis}
+  .caption.off{opacity:0}
+  .zoom button.on{background:#1f7fc0;color:#fff;border-color:#1f7fc0}
 
   /* ---- animations used by the map ---- */
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -60,8 +66,10 @@
 <div class="zoom">
   <button type="button" id="zin" title="Zoom in" aria-label="Zoom in">+</button>
   <button type="button" id="zout" title="Zoom out" aria-label="Zoom out">&minus;</button>
+  <button type="button" id="ztour" title="Pause tour" aria-label="Pause tour"><svg viewBox="0 0 24 24" fill="currentColor"><path id="ztour-icon" d="M7 5h3v14H7zM14 5h3v14h-3z"/></svg></button>
   <button type="button" id="zfit" title="Reset view" aria-label="Reset view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
 </div>
+<div class="caption off" id="caption" role="status"></div>
 <div class="hint" id="hint">Drag to pan &middot; scroll or pinch to zoom</div>
 
 <script src="src/core.js"></script>
@@ -80,6 +88,7 @@
 <script src="art/manifest.js"></script>
 <script src="src/exports.js"></script>
 <script src="src/map.js"></script>
+<script src="src/tour.js"></script>
 <script>
 (function () {
 Assets.mountDefs();
@@ -237,6 +246,42 @@ addEventListener('keydown', e => {
   else if (e.key === '-') zoomAt(1 / 1.5, W / 2, H / 2);
   else if (e.key === '0') fit();
 });
+
+/* ---------- scene tour (src/tour.js) ----------
+   Any drag, wheel, key or button stops the tour; it picks up again RESUME s after the last touch, with the zoom out
+   from wherever the view was left, unless it was paused with the tour button. Animations keep running throughout. */
+const RESUME = 20;
+const caption = document.getElementById('caption'), tourBtn = document.getElementById('ztour'), tourIcon = document.getElementById('ztour-icon');
+const here = () => ({ w: W / s, cx: vx + W / 2 / s, cy: vy + H / 2 / s });
+const tour = Assets.tour.run({
+  clock: () => svg.getCurrentTime(),                                            // the map's SMIL time, so zoom-ins land on the action
+  home: () => ({ w: W / cover(), cx: MW / 2, cy: MH / 2 }),                    // the fit() view
+  close: sc => ({ w: Math.max(sc.w, sc.w * .62 * W / H), cx: sc.at[0], cy: sc.at[1] }),
+  show: v => { s = W / v.w; vx = v.cx - v.w / 2; vy = v.cy - H / 2 / s; update(); },
+  caption: sc => { if (sc) caption.textContent = sc.name; caption.classList.toggle('off', !sc); }
+});
+let running = false, resumeT = 0, paused = false;
+function startTour(from) { running = true; tour.start(from); }
+function stopTour() { running = false; tour.stop(); }
+function setPaused(p) {
+  paused = p; clearTimeout(resumeT);
+  tourBtn.classList.toggle('on', p);
+  tourBtn.title = p ? 'Play tour' : 'Pause tour'; tourBtn.setAttribute('aria-label', tourBtn.title);
+  tourIcon.setAttribute('d', p ? 'M8 5v14l11-7z' : 'M7 5h3v14H7zM14 5h3v14h-3z');
+  if (p) stopTour(); else startTour(s < cover() * 1.01 ? null : here());
+}
+// the person takes over: stop now, and come back once they have left the map alone for RESUME s
+function touched() {
+  if (running) stopTour();
+  clearTimeout(resumeT);
+  if (!paused) resumeT = setTimeout(() => startTour(here()), RESUME * 1000);
+}
+['pointerdown', 'pointerup', 'wheel', 'dblclick'].forEach(t => svg.addEventListener(t, touched, { passive: true }));
+addEventListener('keydown', touched);
+['zin', 'zout', 'zfit'].forEach(id => document.getElementById(id).addEventListener('click', touched));
+addEventListener('resize', () => tour.refresh());
+tourBtn.addEventListener('click', () => setPaused(!paused));
+if (matchMedia('(prefers-reduced-motion: reduce)').matches) setPaused(true); else startTour();
 })();
 </script>
 </body>

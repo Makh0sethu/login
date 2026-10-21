@@ -34,6 +34,11 @@
   .titles h2{font-size:clamp(.9rem,2vw,1.35rem);font-weight:500;letter-spacing:.02em;line-height:1.3;margin-top:4px;text-transform:uppercase}
 
   main{display:grid;place-items:center;padding:8px 16px;pointer-events:none}
+  /* name of the scene the map tour is zoomed into, under the scene (left and top are set by the tour script) */
+  .caption{position:fixed;top:0;left:50%;transform:translateX(-50%);padding:7px 14px;border-radius:999px;
+    background:rgba(255,255,255,.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--ink);font-size:.8rem;font-weight:600;
+    box-shadow:0 6px 18px rgba(20,50,80,.18);transition:opacity .8s;pointer-events:none;white-space:nowrap;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis}
+  .caption.off{opacity:0}
 
   /* login */
   form{pointer-events:auto;width:min(100%,380px);background:rgba(255,255,255,.55);backdrop-filter:blur(10px) saturate(1.2);-webkit-backdrop-filter:blur(10px) saturate(1.2);
@@ -114,6 +119,7 @@
       <div class="row"><a href="#">Forgot password?</a></div>
       <div id="msg" role="status"></div>
     </form>
+    <div class="caption off" id="caption" aria-hidden="true"></div>
   </main>
 
   <footer>
@@ -144,10 +150,71 @@
 <script src="art/manifest.js"></script>
 <script src="src/exports.js"></script>
 <script src="src/map.js"></script>
+<script src="src/tour.js"></script>
 <script src="src/debug.js"></script>
 <script>
 Assets.mountDefs();
 document.getElementById('map').innerHTML = Assets.map.render();
+
+/* ---------- scene tour behind the form (src/tour.js) ----------
+   The view is the map's viewBox, given the screen's aspect ratio and kept inside the 1600 x 1000 map. A zoomed-in
+   scene's core (CORE of its width) is fitted into the open part of the screen that shows it biggest: left or right of the form, or above or
+   below it, always between the header and the footer (all measured, so it follows the layout at any screen size).
+   A scene near the map's edge can't be centred there, so the zoom backs off until the scene sits inside that part.
+   The caption goes under the scene. Fits are worked out once per scene and again after a resize. */
+(function () {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const svg = document.getElementById('map'), caption = document.getElementById('caption');
+  const form = document.getElementById('login'), header = document.querySelector('header'), footer = document.querySelector('footer');
+  const MW = 1600, MH = 1000, TALL = .62, CORE = .5, PAD = 12;   // CORE: the part of a scene's width that has to show
+  const homeS = () => Math.max(innerWidth / MW, innerHeight / MH);
+  // the open parts of the screen, in px, kept PAD clear of the form, the header and the footer
+  function regions() {
+    const f = form.getBoundingClientRect(), top = header.getBoundingClientRect().bottom + PAD, bottom = footer.getBoundingClientRect().top - PAD;
+    return [[0, top, f.left - PAD, bottom], [f.right + PAD, top, innerWidth, bottom], [0, top, innerWidth, f.top - PAD], [0, f.bottom + PAD, innerWidth, bottom]]
+      .map(([x0, y0, x1, y1]) => ({ x0, y0, x1, y1 })).filter(r => r.x1 - r.x0 > 60 && r.y1 - r.y0 > 40);
+  }
+  // the view that puts the core of scene sc in region r, zoomed as far as it fits (but no closer than the scene's own
+  // width across the screen): { w, cx, cy, s, box } (box = the core on screen)
+  function fitIn(sc, r) {
+    const W = innerWidth, H = innerHeight, sw = sc.w * CORE, sh = sw * TALL;
+    // the scene's footprint, cut to the map
+    const bx0 = Math.max(0, sc.at[0] - sw / 2), bx1 = Math.min(MW, sc.at[0] + sw / 2), by0 = Math.max(0, sc.at[1] - sh / 2), by1 = Math.min(MH, sc.at[1] + sh / 2);
+    let s = Math.min((r.x1 - r.x0) / (bx1 - bx0), (r.y1 - r.y0) / (by1 - by0), W / sc.w);
+    for (; s > homeS(); s *= .92) {
+      const w = W / s, h = H / s;
+      let cx = (bx0 + bx1) / 2 + (W / 2 - (r.x0 + r.x1) / 2) / s, cy = (by0 + by1) / 2 + (H / 2 - (r.y0 + r.y1) / 2) / s;
+      cx = Math.min(Math.max(cx, w / 2), MW - w / 2); cy = Math.min(Math.max(cy, h / 2), MH - h / 2);
+      const box = [(bx0 - cx + w / 2) * s, (by0 - cy + h / 2) * s, (bx1 - cx + w / 2) * s, (by1 - cy + h / 2) * s];
+      if (box[0] >= r.x0 - 1 && box[1] >= r.y0 - 1 && box[2] <= r.x1 + 1 && box[3] <= r.y1 + 1) return { w, cx, cy, s, box };
+    }
+    return null;
+  }
+  let fits = new Map();
+  const home = () => ({ w: innerWidth / homeS(), cx: MW / 2, cy: MH / 2 });   // the whole map, as slice shows it
+  function close(sc) {
+    if (!fits.has(sc)) fits.set(sc, regions().map(r => fitIn(sc, r)).filter(Boolean).sort((a, b) => b.s - a.s)[0] || null);
+    return fits.get(sc) || home();                                             // no room anywhere: stay zoomed out
+  }
+  const tour = Assets.tour.run({
+    clock: () => svg.getCurrentTime(),
+    home,
+    close,
+    show: v => { const h = v.w * innerHeight / innerWidth; svg.setAttribute('viewBox', [v.cx - v.w / 2, v.cy - h / 2, v.w, h].map(n => n.toFixed(2)).join(' ')); },
+    caption: sc => {
+      const v = sc && close(sc);
+      if (v && v.box) {
+        caption.textContent = sc.name;
+        const half = Math.min(caption.offsetWidth, innerWidth) / 2 + 8, b = v.box;
+        caption.style.left = Math.min(Math.max((b[0] + b[2]) / 2, half), innerWidth - half) + 'px';
+        caption.style.top = Math.min(b[3] + 8, footer.getBoundingClientRect().top - caption.offsetHeight - 8) + 'px';
+      }
+      caption.classList.toggle('off', !(v && v.box));
+    }
+  });
+  addEventListener('resize', () => { fits = new Map(); tour.refresh(); });
+  tour.start();
+})();
 
 /* ---------- form behaviour (front-end demo only) ---------- */
 const pw = document.getElementById('p'), eye = document.getElementById('eye');
