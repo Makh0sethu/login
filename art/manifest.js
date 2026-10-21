@@ -830,10 +830,10 @@ window.Assets.exportsManifest = {
   "svg": "art/svg/09-energy/gis-satellite.svg",
   "png": null,
   "frame": [
-   -43,
+   -205,
    -28.5,
-   345,
-   201.5
+   265,
+   150
   ],
   "edited": false
  },

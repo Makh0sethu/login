@@ -32,7 +32,7 @@ archive/                   unused logos and old file versions, kept for referenc
 | File | What it does |
 |---|---|
 | `src/assets/energy.js` | Generation + distribution assets (`Assets.energy`): wind turbine, solar array, hydro powerhouse, biogas plant, substation, distribution pole (optionally with a pole-mounted transformer), pole conductors, service drops, GIS satellite + scan beam, spatial data collectors (`collector(x, y, 'rover' | 'logger')`), the booster ground station (`booster()`, link ends in `BOOSTER`), a parabolic `dish()`, and `link(a, b, colour)` radio beams with moving data packets. |
-| `src/assets/crew.js` | ZETDC line crew (`Assets.crew`): lineman poses (`walk`, `climb`, `cart` riding a conductor, `crouch`, `spot`), a cone, and `actor(track, poses, dur, begin)`, which moves one figure through keyed poses on a vehicle's lap. |
+| `src/assets/crew.js` | ZETDC line crew (`Assets.crew`): lineman poses (`walk`, `carry` with the ladder, `crouch`, `climb` the ladder, `reach` working on the crossarm, `hold` footing the ladder, `spot`), the `ladder` leant on a pole, a cone, and `actor(track, poses, dur, begin)`, which moves one figure through keyed poses on a vehicle's lap. |
 | `src/assets/textures.js` | Paints the ground textures once at load on a `<canvas>` and registers them as `tx-*` patterns. See *Land textures* below. |
 | `src/assets/terrain.js` | Scene slabs (used by its preview page and the exports) and the `ter-*` patterns the map uses (gravel, coal). |
 | `src/assets/roads.js` | Road + rail pieces from the old five-tile page; only `preview/rails.html` uses it now. |
@@ -64,20 +64,23 @@ archive/                   unused logos and old file versions, kept for referenc
 |---|---|---|
 | Kariba-style arch dam + lake + gorge | top edge, x≈390–630 | `falls()` (wall, gates, spillway cycling closed/open every `DAM_CYCLE` s), `LAKE` in `ground()` |
 | Dry plain + Hwange power station | top-left | `DRY` polygon, anchor `HW`, `hwange()` |
-| Open road to Hwange + power lines | top centre, and out across the map | ring road, `ROADS[0]`, `LINES` |
-| REF rural village (huts, houses, school, solar, fields) | top-right. No road: the ZESA ladder truck tours it over open ground; at the transformer pole its line crew gets out, one lineman climbs and rides a line cart along the span to the houses, the other cones off the cab | anchor `REF`, `ref()`, `lineCrew()` |
-| Powertel city + ZESA depot + Petrotrade #2 | right / bottom-right | anchor `CITY`, `city()`, `CITY_ST` streets. The grid carries on out of town to the right edge: shops first, then the `CITY_RES` garden blocks with houses. A second ZESA ladder truck stops on cross street x = 100 among the garden blocks, where its line crew rides the pole span over the road (`lineCrew()`) |
+| Open road to Hwange + power lines | top centre; transmission pylons cross the inner field from Hwange to the substation, distribution poles fan out from there | ring road, `ROADS[0]`, `LINES`, `FEEDERS` |
+| REF rural village (huts, houses, school, solar, fields) | top-right. No road: the ZESA ladder truck tours it over open ground; at the pole by the huts its line crew gets out: one carries the extension ladder over, leans it on the pole and foots it, the other sets a cone, climbs the ladder and works on the crossarm | anchor `REF`, `ref()`, `lineCrew()` |
+| Powertel city + ZESA depot + Petrotrade #2 | right / bottom-right | anchor `CITY`, `city()`, `CITY_ST` streets. The grid carries on out of town to the right edge with shops. A second ZESA ladder truck stops on the back street by the city feeder's transformer pole, and its crew does the same ladder job (`lineCrew()`) |
+| Garden blocks | none at the moment (the inner right side was crowded, so `HOMES` is empty); add world `[x0, y0, x1, y1]` entries to build some | `HOMES`, `homes()`; each block's pole run starts at a south-feeder pole |
 | NOIC Msasa tank farm | bottom centre | anchor `MSA`, `msasa()` |
 | Mutare mountains + Feruka depot | bottom-left of centre | `mountain()` list in `render()`, `FER`, `feruka()` |
 | Beira port, ocean, tanker, rig, small boats | bottom-left corner | `OCEAN` polygon, `BEIRA`, `quay()`. `tankerRun()` sails the tanker in, offloads at the jetty, sails out and returns (one 56 s loop). `boats()` adds six small boats on random sea lanes, new on every load |
 | Suburb with Petrotrade #1 | left | anchor `SUB`, `suburb()` |
 | Pipeline Beira → Feruka → Msasa | bottom | `PIPE`, `pipeline()` |
-| Wind farm + main substation | inside the ring, top-right (right of the card) | `WIND` (`[x, y, height]`), `SS` / `SS_W` / `SS_D`. Buried collector cables run from each turbine to the substation |
-| Solar PV plant | inside the ring, left | `SOLAR`, `SOLAR_LINE` (poles out to the REF line) |
-| Hydro station | below the dam | `HY`, `hydro()`: intake on the lake shore, penstocks, powerhouse, tie to the nearest pylon |
+| Wind farm + main substation | the wind farm fills the top of the inner field, under the ring road's top side; the main substation is inside the ring by the right corner | `WIND` (`[x, y, height]`), `SS` / `SS_W` / `SS_D`. Buried collector cables run from each turbine to the substation |
+| Solar PV plant | inside the ring, left | `SOLAR`, `SOLAR_LINE` (poles out to the main line's first pylon) |
+| Hydro station | below the dam | `HY`, `hydro()`: intake on the lake shore, penstocks, powerhouse, tie to its own pylon line `LINE_HY`, which joins the main line inside the ring |
 | Biogas plant | REF village, behind the school | in `ref()` |
-| GIS satellite | floating above the clouds over the inner field, beam on the wind farm | end of `render()` |
-| Spatial data chain | four field collectors (GNSS survey rovers + data-logger masts) uplink to the GIS satellite, which downlinks to the booster ground station (inside the ring, left of the city), which relays by microwave to the ZESA HQ roof dish in the city | `COLLECTORS`, anchor `BOOST`, `HQ_DISH` (city local); links drawn at the end of `render()` with `Assets.energy.link()` |
+| GIS satellite | floating above the clouds beside the wind farm; its beam (`SAT_BEAM`, baked into the exported art/svg/09-energy/gis-satellite.svg, so re-run tools/export-energy.js after moving `SAT` or `WIND`) scans the wind farm | end of `render()` |
+| Spatial data chain | surveyors on foot (REF village, the suburb, the city back street) walk from pole to pole and house to house tagging each pole (orange pin) and each meter (blue pin) with a phone; every tag sends a burst up to the GIS satellite, which downlinks to the booster ground station (inside the ring, left of the city), which relays by microwave to the ZESA HQ roof dish in the city | `SURVEYS` + `surveyWalk()` (tours are picked from the registered poles and buildings near each `near`); `BOOST`, `HQ_DISH`; links drawn at the end of `render()` with `Assets.energy.link()` |
+| Pylon inspection drone | a ZESA ladder truck, two pilots and a charging pad on open ground south-east of Hwange. The drone lifts off, flies up the main line (`LINE_MAIN`) hovering over each pylon (the top glows mint only while it is over it, then a tick), carries on to the wind plant, returns straight to the pad, charges for 2 s, then flies off and fades out (one ~80 s loop) | `DRONE_PYLONS`, `DRONE_TURN`, `DRONE_PAD`, `DRONE_TRUCK`, `DRONE_PILOTS` next to `SS_IN`; `Assets.energy.droneMission()` / `pilot()` / `dronePad()`. Leg times come from distance (`SPEED` in `droneMission`) |
+| Power station flags | a pole with the Zimbabwe flag and a ZESA flag (rippling) at every power station: Hwange, Kariba hydro, the solar PV plant and the wind farm | `FLAG_SPOTS` next to `SS_IN` in `src/map.js`; `Assets.energy.flags()`. `Assets.energy.zesaCrest()` is the ZESA coat of arms redrawn as vectors (also on the drone charging pad) |
 
 The **ring road** is a rounded square at world `±RING` (370) around the card whose sides bend in and out. The bends are
 the `BEND` knots per side: `[position along the side, offset]`, where a positive offset is away from the card. `side(name, c, lat)`
@@ -111,13 +114,17 @@ under ~0.3 per unit along the side), because vehicles keep their straight-axis s
   Pass `stops` (`{ pointIndex: seconds }`) to park a vehicle on its route, as the REF village truck does. Liveries: cars `zetdc`,
   `zetdc-truck`, `moepd`, `zera`; trucks `petrotrade`, `noic`.
 - **Routes can turn corners:** each run with one heading gets its own sprite. An example is the ZESA truck's tour of the REF village.
-- **Power lines:** `LINES` is a list of pylon chains, each starting at Hwange (or a pylon of the line it branches from) and
-  running to a region or off the map edge. The wires' flow animation runs from the first pylon to the last. Trees keep clear of pylons.
-- **Substation + distribution:** `LINE_MAIN` (from Hwange) ends at the substation's gantry (`SS_IN`) and `LINE_CITY` leaves
-  from it (`SS_OUT`); `tie()` draws those spans. Pylons carry transmission only: households are fed by wooden distribution poles
-  via `lv(put, poles, drops, skip0)` inside `ref()`, `city()` and `suburb()`. `poles` are local `[x, y]` (add `'tx'` for a
-  pole-mounted transformer), `drops` are `[poleIndex, [x, y, z]]` service drops to a building. The REF village is fed from the
-  REF line's last pylon; the city garden blocks get one pole run per row of blocks; the suburb has a run along its street.
+- **Power lines:** pylons carry power only from the power stations to the main substation. `LINES` holds those pylon chains:
+  `LINE_MAIN` from Hwange straight across the inner field (behind the card on a 16:10 screen) to the substation, `LINE_HY` from
+  the hydro station into it, and Hwange's two export lines off the left edge. The wires' flow animation runs from the first
+  pylon to the last. Trees keep clear of pylons and poles.
+- **Substation + distribution:** `LINE_MAIN` lands on the substation's incoming gantry (`SS_IN`) and the feeders leave from its
+  outgoing one (`SS_OUT`); `tie()` draws those spans. From there everything is wooden distribution poles: `FEEDERS` are world
+  pole chains (`F_CITY` through town behind the back street, `F_REF` over the top of the ring to the village, `F_MSA` past the
+  garden blocks to the Msasa depot, `F_FER` on to Feruka and Beira), drawn with `lv()`. Inside regions,
+  `lv(put, poles, drops, skip0)` adds local pole runs in `ref()`, `homes()` and `suburb()`. `poles` are `[x, y]` (add `'tx'`
+  for a pole-mounted transformer), `drops` are `[poleIndex, [x, y, z]]` service drops to a building, and `skip0` skips a
+  first pole that a feeder already draws.
 - **City, suburb and REF village** are drawn as separate depth-sorted pieces (`put(localDepth, svg)`), not one block, so traffic can
   run between their buildings. Add new buildings there with `put` at their centre's `x + y`.
 - **Trees:** `trees()` scatters up to 360 trees with a fixed seed, skipping roads, water, regions and the
@@ -216,7 +223,7 @@ everything the map registers through `mark()` / `drive()` in `src/map.js`:
 | `c1…` | cars (moving labels follow the car; parked ones too) | `h1…` | houses and huts |
 | `t1…` | fuel tankers | `b1…` | buildings (city blocks, school, shops, offices) |
 | `v1…` | the oil tanker and motor boats | `k1…` | fuel tanks |
-| `r1…` | roads (`r1` ring road, `r2–r6` branch roads, `r7–r15` city streets) | `w1…` | wind turbines |
+| `r1…` | roads (`r1` ring road, `r2–r6` branch roads, `r7–r12` city streets) | `w1…` | wind turbines |
 | `l1…` | power lines (pylon chains in `LINES`) | `p1…` / `d1…` | pylons / distribution poles |
 | `a1…` | other assets (cooling towers, substations, solar, biogas, hydro, rig, satellite …) | | |
 

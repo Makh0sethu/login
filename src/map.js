@@ -93,22 +93,24 @@
     BEIRA: [332.4, 744, 'Beira port tanks'],
     FER:   [590.4, 803, 'NOIC Feruka depot'],
     SS:    [1146.4, 500, 'Main substation'],            // back corner of the yard
-    WIND:  [1137.7, 425, 'Wind farm'],
+    WIND:  [880, 300, 'Wind farm'],
     SOLAR: [431.1, 395, 'Solar PV plant'],              // back corner of the array
     HY:    [418, 252, 'Kariba hydro station'],          // back corner of the powerhouse
-    SAT:   [905, 262, 'GIS satellite'],                 // screen space: the satellite's body
+    SAT:   [1010, 215, 'GIS satellite'],                 // screen space: the satellite's body
     BOOST: [1030, 585, 'Data booster ground station']   // centre of its fenced pad
   };
+  const SAT_BEAM = [SITES.WIND[0] - SITES.SAT[0], SITES.WIND[1] - SITES.SAT[1]];   // satellite -> wind farm, in canvas px
   const site = k => G(SITES[k][0], SITES[k][1]);
   const loc = (o, x, y) => [o[0] + x, o[1] + y];
   const RING = 370;
   const HW = site('HW'), REF = site('REF'), CITY = site('CITY'), MSA = site('MSA');
   const SUB = site('SUB'), BEIRA = site('BEIRA'), FER = site('FER');
-  /* spatial data chain: field collectors uplink to the GIS satellite, which downlinks to the booster ground station,
-     which relays by microwave to the ZESA head office in the city (its roof dish is at HQ_DISH, city local units).
-     COLLECTORS are [canvas x, canvas y, 'rover' | 'logger'], kept clear of roads and trees. */
+  /* spatial data chain: surveyors on foot tag every pole and every meter they pass and send each fix up to the GIS satellite,
+     which downlinks to the booster ground station, which relays by microwave to the ZESA head office in the city (its roof dish
+     is at HQ_DISH, city local units). SURVEYS: each walks a tour of the nearest poles + buildings ('h' houses/huts, 'b' buildings)
+     within r of near (world x, y), n stops long (see surveyWalk). */
   const BOOST = site('BOOST');
-  const COLLECTORS = [[1345, 395, 'rover'], [735, 250, 'logger'], [1070, 790, 'logger'], [488, 482, 'rover']].map(([cx, cy, k]) => [...G(cx, cy), k]);
+  const SURVEYS = [{ near: REF, r: 170, meters: 'h', n: 9 }, { near: SUB, r: 150, meters: 'h', n: 9 }, { near: loc(CITY, 10, -140), r: 130, meters: 'b', n: 9 }];
   const HQ_DISH = [46, 18, 40];
   const OCEAN = [[-60, 600], [40, 606], [110, 632], [168, 690], [205, 760], [228, 840], [240, 920], [246, 1060], [-60, 1060]];
   // Lake Kariba behind the dam (canvas px); its lower edge tucks under the wall
@@ -168,46 +170,57 @@
     portLane(PORT_K[0][0], 600, 0),                                   // to Beira port
     [[MSA[0] + 10, MSA[1] + 30], side('bottom', MSA[0] + 10)]         // depot gate
   ];
-  /* city street grid, local to CITY. It carries on past the town towards the right edge of the map
-     (in local units the screen's right edge is at x - y ≈ 312 and its bottom at x + y ≈ 600, so streets run past those) */
+  /* city street grid, local to CITY. The front street carries on past the town and off the right edge of the map (in local
+     units the screen's right edge is at x - y ≈ 312); the cross streets end at it, since nothing stands south of it */
   const CITY_ST = [
-    [[-136, -130], [230, -130]], [[side('right', CITY[1] + 120)[0] - CITY[0], 120], [470, 120]], [[10, 240], [400, 240]],  // along x (high street y = 0 is ROADS[1])
-    [[-90, -130], [-90, 120]], [[10, -130], [10, 240]], [[100, -260], [100, 560]],                     // town cross streets
-    [[190, -170], [190, 460]], [[280, -80], [280, 360]], [[370, 10], [370, 260]]                       // out-of-town cross streets
+    [[-136, -130], [190, -130]], [[side('right', CITY[1] + 120)[0] - CITY[0], 120], [470, 120]],   // along x (high street y = 0 is ROADS[1])
+    [[-90, -130], [-90, 120]], [[10, -130], [10, 120]], [[100, -260], [100, 120]], [[190, -170], [190, 120]]   // cross streets
   ];
-  // out-of-town blocks with houses and gardens: [x0, y0, x1, y1]
-  const CITY_RES = [[20, 250, 90, 320], [110, 250, 180, 320], [200, -120, 270, -10], [200, 130, 270, 230], [200, 250, 270, 320],
-    [290, 10, 360, 110], [290, 130, 360, 230], [290, 250, 360, 320], [380, 130, 450, 230]];
+  // garden blocks with four houses each, inside the ring between the city and the card (world [x0, y0, x1, y1]); they
+  // keep clear of the substation yard (y < -152), the booster pad (x 256..296, y -62..-22) and the Msasa depot
+  // (x 229..302 from y 175), and face the ring road. The three blocks that stood by the substation and the Msasa depot are gone (that side was crowded); add [x0, y0, x1, y1] entries back to build more
+  const HOMES = [];
   const PIPE = [[BEIRA[0] + 12, BEIRA[1] + 6], [150, BEIRA[1] + 6], [150, 190], [MSA[0] - 48, 190]];
-  /* power lines: each a list of pylons, starting at Hwange power station (or at a pylon of a line it branches from) and
-     running out to a region or off the edge of the map, so the flowing wires carry power out across the map */
-  const LINE_REF = [side('left', 130, 32), side('left', 40, 32), side('left', -60, 32), side('left', -260, 32), [-380, -380],
-    side('top', -260, 32), side('top', -150, 32), side('top', -40, 32), loc(REF, -91, 75)];       // round the outside of the ring to the village
   const SOUTH = [HW[0] + 50, HW[1] + 84];                                                         // Hwange's south yard
-  /* generation + the main substation (src/assets/energy.js). The main line from Hwange loops in and out of the substation
-     (SS, inside the ring by the right corner), which the wind farm also feeds; the line on into town leaves from there. */
+  /* generation + the main substation (src/assets/energy.js). Transmission pylons only carry power from the power
+     stations into the main substation (SS, inside the ring by the right corner), which the wind farm also feeds by
+     buried cables; everything from the substation outwards is wooden distribution poles (FEEDERS). */
   const SS = site('SS'), SS_W = 64, SS_D = 48;
   const WIND_O = site('WIND');
   const WIND = [[-100, -28, 74], [-20, -46, 80], [62, -30, 70], [-68, 34, 66], [16, 26, 76], [92, 44, 64]].map(([x, y, h]) => [WIND_O[0] + x, WIND_O[1] + y, h]);   // local [x, y, height]
   const SOLAR = site('SOLAR');
-  const SOLAR_LINE = [[82, -8], [18, -16], [-44, 4]].map(([x, y]) => loc(SOLAR, x, y));        // poles from the PV kiosk out to the REF line
-  const LINE_MAIN = [SOUTH, [-325, 325], side('bottom', -230, -34), side('bottom', -120, -34), side('bottom', -10, -34), side('bottom', 100, -34),
-    side('bottom', 200, -34), [325, 325], side('right', 230, -34), side('right', 120, -34), side('right', 10, -34), side('right', -100, -34)];   // inside the ring to the substation
-  const LINE_CITY = [side('right', -200, -34), loc(CITY, -110, -155), loc(CITY, -10, -155), loc(CITY, 90, -155), loc(CITY, 232, -155), loc(CITY, 330, -155)];   // substation, through town, off the right edge
-  // where the two lines land on the substation's gantry (world x, y, z)
+  const SOLAR_LINE = [[82, -8], [18, -16], [-44, 4]].map(([x, y]) => loc(SOLAR, x, y));        // poles from the PV kiosk out to the main line's first pylon
+  // Hwange -> straight across the inner field (behind the card on a 16:10 screen) -> the substation's incoming gantry
+  const LINE_MAIN = [side('left', 130, 32), [-310, 60], [-235, -40], [-140, -115], [-30, -160], [75, -170], [160, -140]];
+  // the hydro station's pylon by the gorge, joining the main line inside the ring
+  const HY_PYLON = side('left', -60, 32), LINE_HY = [HY_PYLON, [-300, -55], [-235, -40]];
+  // where the main line lands on the substation's gantry, and where the feeders leave it (world x, y, z)
   const SS_IN = [SS[0] + SS_W - 10, SS[1] + 26, 24], SS_OUT = [SS[0] + SS_W - 10, SS[1] + 6, 24];
+  /* pylon inspection: a ZESA truck parks by Hwange power station, its two pilots stand by a charging pad, and the drone
+     flies up the main line (LINE_MAIN, Hwange -> main substation), hovering over every pylon to inspect it, on to the wind
+     plant (DRONE_TURN) and back to the pad to charge (see Assets.energy.droneMission). */
+  const DRONE_PYLONS = LINE_MAIN, DRONE_TURN = [WIND_O[0], WIND_O[1], 96];
+  const DRONE_PAD = G(405, 500), DRONE_TRUCK = G(357, 512), DRONE_PILOTS = [G(381, 510), G(391, 515)];
+  /* the ZESA + Zimbabwe flags flown at every power station: [x, y, name] in world units, on open ground at each plant's front */
+  const FLAG_SPOTS = [[...loc(HW, 58, 58), 'Hwange power station'], [...loc(site('HY'), 8, 44), 'Kariba hydro station'], [...loc(SOLAR, 108, 44), 'Solar PV plant'],
+    [...loc(WIND_O, -140, 10), 'Wind farm']];
   const LINES = [
-    LINE_REF,
     LINE_MAIN,
-    LINE_CITY,
-    [loc(REF, -91, 75), loc(REF, 50, 96), loc(REF, 200, 10), loc(REF, 300, -40), loc(REF, 400, -90)],                 // on past the village, off the top right
-    [SOUTH, [-430, 390], [-500, 425], [-570, 440]],                                                                    // past the suburb, off the left edge
-    [[HW[0] - 108, HW[1] + 24], [HW[0] - 208, HW[1] + 28], [HW[0] - 308, HW[1] + 33]],                                 // west from Hwange, off the left edge
-    [side('bottom', 200, -34), loc(MSA, 70, 40)],                                                                      // NOIC Msasa depot
-    [side('bottom', 100, -34), [230, 400], [222, 470], [180, 560], [60, 578], [-35, 580]],                             // Feruka, then Beira port
-    [[222, 470], [260, 600], [290, 740], [310, 860]]                                                                   // down the coast, off the bottom
+    LINE_HY,
+    [SOUTH, [-430, 390], [-500, 425], [-570, 440]],                                                                    // Hwange south, past the suburb, off the left edge
+    [[HW[0] - 108, HW[1] + 24], [HW[0] - 208, HW[1] + 28], [HW[0] - 308, HW[1] + 33]]                                  // west from Hwange, off the left edge
   ];
   const PYLONS = LINES.flat().filter((p, i, a) => a.findIndex(q => Math.hypot(q[0] - p[0], q[1] - p[1]) < 1) === i);
+  /* distribution feeders from the substation (world [x, y], 'tx' = pole-mounted transformer). The city feeder runs
+     through town behind the back street (city y = -145, poles kept 20+ off the cross streets) and off the right edge; the REF feeder crosses the top of the
+     ring to the village's first pole (drawn here, so ref() skips it); the south feeder serves the garden blocks
+     (each block's own pole run starts at the feeder pole level with its front edge) and the Msasa depot, then carries on as
+     the Feruka -> Beira feeder. */
+  const F_CITY = [[285, -205], [330, -218], [390, -242]].concat([-60, -20, 35, 75, 122, 165, 215, 255, 305, 345].map(x => [...loc(CITY, x, -145), x === 122 ? 'tx' : undefined]));
+  const F_REF = [[185, -215], [110, -200], [35, -190], [-40, -230], [-75, -305], [-55, -395], loc(REF, -84, 62)];
+  const F_MSA = [[252, -140], [252, -74, 'tx'], [240, -20], [246, 28], [252, 74, 'tx'], [252, 150], [300, 162], loc(MSA, 70, 40)];
+  const F_FER = [loc(MSA, 70, 40), [290, 330], [262, 410], [228, 465], [205, 520], [165, 565], [100, 578], [30, 580], [-35, 580]];
+  const FEEDERS = [F_CITY, F_REF, F_MSA, F_FER];
 
   /* ---------- small props ---------- */
   function pine(k, R) {
@@ -241,7 +254,7 @@
     let s = '';
     for (let i = 0; i < list.length - 1; i++) {
       for (const dx of [-11, 11]) {
-        const a = P(list[i][0], list[i][1], h - 8), b = P(list[i + 1][0], list[i + 1][1], h - 8);
+        const a = P(list[i][0], list[i][1], (list[i][2] || h) - 8), b = P(list[i + 1][0], list[i + 1][1], (list[i + 1][2] || h) - 8);
         const d = `M${f(a[0] + dx)} ${f(a[1])}Q${f((a[0] + b[0]) / 2 + dx)} ${f((a[1] + b[1]) / 2 + 9)} ${f(b[0] + dx)} ${f(b[1])}`;
         s += `<path d="${d}" stroke="#5d6b78" stroke-width=".7" fill="none" opacity=".75"/>`;
         if (dx > 0) s += `<path d="${d}" stroke="#ffcf4d" stroke-width="1.4" fill="none" class="flow" opacity=".85"/>`;
@@ -517,8 +530,8 @@
 
   /* ---------- hydro station below the dam ----------
      An intake on the lake shore by the west abutment (canvas px) feeds two penstocks down the west end of the gorge wall into the powerhouse HY,
-     whose tailrace runs out into the gorge; its transformer ties into the REF line's nearest pylon. */
-  const HY = site('HY'), HY_PYLON = side('left', -60, 32);
+     whose tailrace runs out into the gorge; its transformer ties into its pylon line (LINE_HY) to the main line. */
+  const HY = site('HY');
   function hydro(items) {
     const E = A.energy, S = (cx, cy) => [cx - CX, cy - CY];
     const intake = [S(394, 174), S(416, 174)];
@@ -591,50 +604,44 @@
     put(-155, swap('09-energy/biogas-plant', -150, -40, () => at(-150, -40, A.energy.biogas())));
     const gas = [P(-104, -34, 1), P(-98, -34, 1), P(-98, 2, 1)];
     put(-100, `<polyline points="${pts(gas)}" stroke="#bf8f2c" stroke-width="1.4" fill="none"/><polyline points="${pts(gas)}" stroke="#ffe08a" stroke-width=".6" fill="none" class="flow"/>`);
-    // distribution: the REF line's last pylon (-91, 75) feeds an 11 kV pole run to the transformer pole, which feeds
-    // low-voltage runs to the houses, the school + biogas plant and the huts, with a service drop to each building
-    lv(put, [[-84, 62], [-34, 56], [-34, 6]]);
+    // distribution: the REF feeder from the main substation ends at the pole (-84, 62) (drawn with the feeder), which feeds
+    // an 11 kV pole run to the transformer pole, which feeds low-voltage runs to the houses, the school + biogas plant and
+    // the huts, with a service drop to each building
+    lv(put, [[-84, 62], [-34, 56], [-34, 6]], [], true);
     lv(put, [[-34, 6], [-34, -28, 'tx'], [-6, -62], [70, -60]], [[2, [-15, -72, 12]], [3, [48, -64, 12]]], true);
     lv(put, [[-34, -28], [-80, -56], [-96, -8]], [[1, [-79, -64, 14]], [2, [-110, 2, 12]], [2, [-111, -26, 9]]], true);
     lv(put, [[-34, -28], [-8, 2], [14, 42], [40, 62], [74, 50]], [[1, [2, 14, 9]], [2, [30, 30, 9]], [2, [-4, 50, 9]], [3, [54, 54, 9]], [3, [26, 76, 9]], [4, [82, 30, 9]], [4, [96, 72, 9]]], true);
-    put(500, tie([-91, 75, 38], [-84, 62, A.energy.POLE_H - 2], [-11, 11], [-5, 5]));
     put(-16, person(-54, 36, '#e04a3f') + person(-50, 38, '#1f7fc0'));
     put(50, person(40, 10, '#f2c35c'));
     put(-76, lamp(-66, -10, 20)); put(-16, lamp(14, -30, 20));
     put(116, T(120, -4, 0, `<path d="M0 -6 l3 -4 l3 4z" fill="#8a6a45"/>`));
-    // the ZESA ladder truck does its rounds inside the village, stopping at the solar mini-grid, the huts and the transformer,
-    // where its line crew gets out for a repair (the loop keeps to open ground: right of the maize, left of the huts, clear of
-    // the crop fields at x -82..-30 / -150..-112)
-    const route = [[-20, -50], [100, -50], [152, -50], [152, 96], [40, 96], [-20, 96], [-20, -24], [-20, -50]], lap = 50, stops = { 1: 4, 4: 4, 6: 20 };
+    // the ZESA ladder truck does its rounds inside the village, stopping at the solar mini-grid, the huts and the pole by
+    // the huts at (-8, 2), where its line crew gets out for a repair (the loop keeps to open ground: right of the maize,
+    // left of the huts, clear of the crop fields at x -82..-30 / -150..-112)
+    const route = [[-20, -50], [100, -50], [152, -50], [152, 96], [40, 96], [-20, 96], [-20, 8], [-20, -50]], lap = 50, stops = { 1: 4, 4: 4, 6: 20 };
     go('car', { livery: 'zetdc-truck', cargo: 'ladder' }, route, lap, -3, stops);
-    // parked at (-20, -24) facing -y: A gets out of the far door, B of the near one and cones off the front of the cab
+    // parked at (-20, 8) facing -y with the pole on its near side: both get out of the near side; the truck's piece is
+    // drawn at depth 3, so the crew goes just in front of it
     lineCrew(put, schedule(route, lap, stops).arrive[6], lap, -3, {
-      pole: [-34, -28], to: [-6, -62], doorA: [-26, -33], doorB: [-13.5, -31], post: [-12, -44], cone: [-20, -47], dA: -61.9, dB: -40 });
+      pole: [-8, 2], foot: [-3.5, 2.5], hold: [-.5, 1], doorA: [-13.5, 1], doorB: [-13.5, 12], cone: [-17, -10], d: 3.5 });
   }
   /* a parked line truck's two linemen, from t0 s into its lap for the 20 s it stands by a pole (all local [x, y]).
-     A walks from doorA to the pole, climbs it, rides a line cart out along the middle conductor towards the pole at `to`,
-     works on it mid-span and comes back down; B walks from doorB to `post`, sets a cone at `cone` and spots from the ground.
-     Both are back at their doors before the truck pulls away. dA / dB are the depths of A (on the ground and the pole)
-     and of B with the cone, picked against the truck's own depth. */
+     B takes the extension ladder from the truck at doorB, carries it to the pole, leans it from `foot` up to the crossarm
+     and foots it from `hold`; A gets out at doorA, sets a cone at `cone`, climbs the ladder and works on the crossarm
+     fittings, then climbs down and picks the cone up. Both are back at their doors before the truck pulls away.
+     d is the crew's depth, picked against the truck's own (in front of it when the pole is on its near side). */
   function lineCrew(put, t0, dur, begin, o) {
-    const W = A.crew, h = A.energy.POLE_H - 2;
-    // the conductor as poleWires() draws it: a quadratic sagging between the crossarms
-    const a = P(o.pole[0], o.pole[1], h), b = P(o.to[0], o.to[1], h), sag = 2.5 + Math.hypot(b[0] - a[0], b[1] - a[1]) * .03;
-    const c = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2 + sag];
-    const wire = u => [0, 1].map(i => (1 - u) * (1 - u) * a[i] + 2 * u * (1 - u) * c[i] + u * u * b[i]);
+    const W = A.crew, top = [o.pole[0] + .6, o.pole[1] + .6, 20];
+    // a point u of the way up the ladder
+    const rung = u => P(o.foot[0] + (top[0] - o.foot[0]) * u, o.foot[1] + (top[1] - o.foot[1]) * u, top[2] * u);
     const A1 = [], B1 = [], key = (k, s, p, pose) => k.push([t0 + s, p, pose]);
-    const ride = (s0, s1, u0, u1, pose, n = 8) => { for (let i = 0; i < n; i++) key(A1, s0 + (s1 - s0) * i / n, wire(u0 + (u1 - u0) * i / n), pose); };
-    // A climbs on the side of the pole facing the viewer
-    const door = P(...o.doorA), base = P(o.pole[0] + 1.2, o.pole[1] + 1.2), top = P(o.pole[0] + 1.2, o.pole[1] + 1.2, 11);
-    key(A1, .3, door, 'walk'); key(A1, 1.8, base, 'climb'); key(A1, 5.1, top, null);
-    ride(5.15, 8.8, .06, .5, 'cart'); key(A1, 8.8, wire(.5), 'work'); ride(11.6, 15, .5, .06, 'cart');
-    key(A1, 15, wire(.06), null); key(A1, 15.05, top, 'climb'); key(A1, 17.6, base, 'walk'); key(A1, 19.1, door, null);
-    const near = P(...o.doorB), post = P(...o.post);
-    key(B1, .5, near, 'walk'); key(B1, 2.3, post, 'crouch'); key(B1, 2.9, post, 'spot'); key(B1, 16.6, post, 'crouch'); key(B1, 17.2, post, 'walk'); key(B1, 18.9, near, null);
-    // on the wire A rides over the conductors
-    put(o.dA, W.actor(A1, { walk: W.walk(), climb: W.climb() }, dur, begin));
-    put(5001, W.actor(A1, { cart: W.cart(false), work: W.cart(true) }, dur, begin));
-    put(o.dB, W.during(at(o.cone[0], o.cone[1], W.cone()), t0 + 2.6, t0 + 16.9, dur, begin) + W.actor(B1, { walk: W.walk(), crouch: W.crouch(), spot: W.spot() }, dur, begin));
+    const doorA = P(...o.doorA), doorB = P(...o.doorB), cone = P(...o.cone), hold = P(...o.hold), up = rung(.55);
+    key(A1, .3, doorA, 'walk'); key(A1, 1.8, cone, 'crouch'); key(A1, 2.5, cone, 'walk'); key(A1, 4, rung(0), 'climb'); key(A1, 6.4, up, 'reach');
+    key(A1, 12.6, up, 'climb'); key(A1, 15, rung(0), 'walk'); key(A1, 16.2, cone, 'crouch'); key(A1, 16.9, cone, 'walk'); key(A1, 18.6, doorA, null);
+    key(B1, .5, doorB, 'carry'); key(B1, 2.6, hold, 'crouch'); key(B1, 3.4, hold, 'hold'); key(B1, 15.3, hold, 'crouch'); key(B1, 16.1, hold, 'carry'); key(B1, 18.4, doorB, null);
+    put(o.d - .1, W.during(W.ladder(rung(0), rung(1)), t0 + 3.2, t0 + 15.7, dur, begin) + W.during(at(o.cone[0], o.cone[1], W.cone()), t0 + 2.2, t0 + 16.6, dur, begin));
+    put(o.d, W.actor(A1, { walk: W.walk(), crouch: W.crouch(), climb: W.climb(), reach: W.reach() }, dur, begin));
+    put(o.d + .05, W.actor(B1, { carry: W.carry(), crouch: W.crouch(), hold: W.hold() }, dur, begin));
   }
 
   function petroStation(seed = 0) {
@@ -696,13 +703,14 @@
     // traffic: high street (y = 0), cross streets (x = 10, x = 100), front street (y = 120)
     go('car', { livery: 'zetdc' }, [[-136, -4.5], [380, -4.5]], 18, -11);
     go('car', { livery: 'zetdc-truck' }, [[380, 4.5], [-136, 4.5]], 18, 0);
-    go('car', { type: 'minibus', color: '#f2c230' }, [[14.5, -130], [14.5, 240]], 12, -1);
-    go('car', { livery: 'zetdc' }, [[5.5, 240], [5.5, -130]], 12, -3.5);
-    go('car', { livery: 'zera' }, [[104.5, -200], [104.5, 190]], 12, -11);
+    // the cross-street cars start / end short of the front street (its edge is at y 111.5), so they only meet the
+    // high-street pair; their begins were picked by simulating every city car over a 36 s cycle (no overlaps, with 4 units to spare)
+    go('car', { type: 'minibus', color: '#f2c230' }, [[14.5, -130], [14.5, 104]], 12, -1.5);
+    go('car', { livery: 'zetdc' }, [[5.5, 104], [5.5, -130]], 12, -2.5);
+    go('car', { livery: 'zera' }, [[104.5, -200], [104.5, 104]], 12, -9);
     go('car', { type: 'hatch', color: '#d4493e' }, [[470, 115.5], [-110, 115.5]], 18, -9.5);
     go('car', { type: 'ev', color: '#4f9a5d' }, [[-110, 124.5], [470, 124.5]], 18, -6);
-    go('car', { type: 'suv', color: '#3a3f46' }, [[194.5, -170], [194.5, 400]], 18, -13.5);
-    go('car', { type: 'pickup', color: '#f4f6f8' }, [[275.5, 330], [275.5, -80]], 12, -2);
+    go('car', { type: 'suv', color: '#3a3f46' }, [[194.5, -170], [194.5, 104]], 18, -13.5);
     // front-left: Petrotrade #2
     mark('b', -42, 64, 'Petrotrade #2');
     put(22, `<g transform="translate(${f(P(-42, 64)[0])},${f(P(-42, 64)[1])}) scale(.62)">${petroStation(2)}</g>`);
@@ -724,38 +732,34 @@
     blk(19, [[116, 20, 26, 22, 22], [150, 24, 24, 20, 16], [118, 70, 24, 22, 20], [150, 74, 22, 20, 14]]);
     blk(29, [[118, 140, 24, 18, 16, 'retail'], [150, 142, 24, 18, 14, 'retail'], [118, 190, 24, 20, 18, 'brick'], [150, 194, 22, 18, 12, 'retail']]);
     blk(31, [[208, 20, 24, 20, 14, 'retail'], [240, 22, 24, 20, 12, 'brick'], [210, 66, 22, 22, 12, 'retail']]);
-    // out of town: four houses per garden block, with trees
-    const H = A.houses, R = rng(23);
-    const walls = [C.white, ['#ffffff', '#f6e7c7', '#e3d1a8']], roofs = [['#d4693e', '#a8502d'], ['#3d8fcf', '#2a6fa5'], ['#4f9a5d', '#2f6b3a']];
-    let n = 0;
-    CITY_RES.forEach(([x0, y0, x1, y1]) => {
-      [[x0 + 6, y0 + 8], [x0 + 40, y0 + 8], [x0 + 6, y1 - 24], [x0 + 40, y1 - 24]].forEach(([x, y]) => {
-        put(x + 12 + y + 8, HOUSE(x, y, 24, 16, 11, 9, walls[n % 2], [C.red[0], ...roofs[n % 3]], n % 3 === 0, n * .25, { variant: n % 4 }));
-        n++;
-      });
-      [[x0 + 35, (y0 + y1) / 2 + 4], [x1 - 4, (y0 + y1) / 2 - 2]].forEach(([x, y]) => put(x + y, at(x, y, roundTree(.75 + R() * .3, R))));
-    });
     put(92, person(-20, 112, '#e04a3f') + person(-14, 114, '#1f7fc0'));
-    // low-voltage poles down the middle of each row of garden blocks (crossing the streets between them), a transformer
-    // on every other block, and a service drop to each house
-    const rows = {};
-    CITY_RES.forEach(b => { const m = (b[1] + b[3]) / 2; (rows[m] = rows[m] || []).push(b); });
-    Object.values(rows).forEach(bl => {
-      const poles = [], drops = [];
-      bl.sort((a, b) => a[0] - b[0]).forEach(([x0, y0, x1, y1], j) => {
-        const m = (y0 + y1) / 2, i = poles.length;
-        poles.push([x0 + 6, m, j % 2 ? undefined : 'tx'], [x0 + 54, m]);
-        drops.push([i, [x0 + 18, y0 + 24, 11]], [i, [x0 + 18, y1 - 24, 11]], [i + 1, [x0 + 52, y0 + 24, 11]], [i + 1, [x0 + 52, y1 - 24, 11]]);
-      });
-      lv(put, poles, drops);
-    });
-    // a ZESA ladder truck comes down cross street x = 100 past the front street (no other traffic there, so its stop
-    // can't cause a crash), stands at (104.5, 272) facing +y under the span where the garden-block poles cross the street,
-    // and its line crew rides the span over the road from the pole at (116, 285)
-    const crewRoute = [[104.5, 200], [104.5, 272], [104.5, 560]], crewLap = 34, crewStops = { 1: 20 };
+    // a ZESA ladder truck pulls into the back street between cross streets x = 100 and x = 190 (no traffic on this
+    // stretch, and it stops short of both junctions, so it can't cause a crash) and stands at (162, -134.5) facing +x just
+    // past the city feeder's transformer pole at (122, -145). The pole is on the truck's far side, so the crew gets out of
+    // the far doors and is drawn behind the truck (one piece, depth 16.5) but in front of the pole.
+    const crewRoute = [[128, -134.5], [162, -134.5], [174, -134.5]], crewLap = 26, crewStops = { 1: 20 };
     go('car', { livery: 'zetdc-truck', cargo: 'ladder' }, crewRoute, crewLap, -5, crewStops);
     lineCrew(put, schedule(crewRoute, crewLap, crewStops).arrive[1], crewLap, -5, {
-      pole: [116, 285], to: [74, 285], doorA: [111, 281], doorB: [110.5, 279], post: [95, 295], cone: [102, 306], dA: 401.1, dB: 394 });
+      pole: [122, -145], foot: [125.5, -141.5], hold: [128, -139.5], doorA: [169, -141], doorB: [153, -141], cone: [138, -136], d: -15 });
+  }
+  // the garden blocks inside the ring (world units, drawn as pieces like the city): four houses and a tree
+  // per block, and a pole run along the block's open front edge (in front of the houses, so the poles show) from the south
+  // feeder's pole, with a service drop to each house
+  function homes(put) {
+    const R = rng(23);
+    const walls = [C.white, ['#ffffff', '#f6e7c7', '#e3d1a8']], roofs = [['#d4693e', '#a8502d'], ['#3d8fcf', '#2a6fa5'], ['#4f9a5d', '#2f6b3a']];
+    let n = 0;
+    HOMES.forEach(([x0, y0, x1, y1]) => {
+      const m = (y0 + y1) / 2;
+      [[x0 + 4, y0 + 6], [x0 + 38, y0 + 6], [x0 + 4, y1 - 22], [x0 + 38, y1 - 22]].forEach(([x, y]) => {
+        // no water tank or carport: they stand past the house's right gable, which is on the ring road for the right column
+        put(x + 12 + y + 8, HOUSE(x, y, 24, 16, 11, 9, walls[n % 2], [C.red[0], ...roofs[n % 3]], n % 3 === 0, n * .25, { variant: n % 4, tank: false, carport: false }));
+        n++;
+      });
+      put(x1 - 3 + m - 2, at(x1 - 3, m - 2, roundTree(.75 + R() * .3, R)));
+      const fy = y1 + 6, feed = F_MSA.find(p => Math.abs(p[1] - fy) < 1);
+      lv(put, [feed, [x0 + 16, fy], [x0 + 50, fy]], [[1, [x0 + 16, y1 - 6, 11]], [2, [x0 + 50, y1 - 6, 11]], [1, [x0 + 16, y0 + 22, 11]], [2, [x0 + 50, y0 + 22, 11]]], true);
+    });
   }
 
   function suburb(put, go) {
@@ -940,7 +944,7 @@
      [-118, 130, -100, 200], [-80, 130, 0, 200], [20, 130, 90, 200], [110, -120, 180, -10], [110, 10, 180, 110], [110, 130, 180, 230], [110, -220, 180, -140], [200, 10, 270, 110]]
       .forEach(([x0, y0, x1, y1]) => { w += pad(CITY, x0 - 1.5, y0 - 1.5, x1 + 1.5, y1 + 1.5, 7, '#c6ced6') + pad(CITY, x0, y0, x1, y1, 6, 'url(#mp-pave)'); });
     // out-of-town gardens
-    CITY_RES.forEach(([x0, y0, x1, y1]) => { w += pad(CITY, x0 - 1.5, y0 - 1.5, x1 + 1.5, y1 + 1.5, 7, '#c6ced6') + pad(CITY, x0, y0, x1, y1, 6, TX('lawn', 'url(#mp-lawn)')); });
+    HOMES.forEach(([x0, y0, x1, y1]) => { w += pad([0, 0], x0 - 1.5, y0 - 1.5, x1 + 1.5, y1 + 1.5, 7, '#c6ced6') + pad([0, 0], x0, y0, x1, y1, 6, TX('lawn', 'url(#mp-lawn)')); });
     // city parks
     w += pad(CITY, -80, 134, -4, 152, 4, TX('lawn', 'url(#mp-lawn)'));
     w += pad(MSA, -58, -52, 56, 44, 12, '#cfc8ba') + pad(MSA, -55, -49, 53, 41, 10, TX('gravel', 'url(#ter-gravel)'));
@@ -986,9 +990,10 @@
     ];
     const rects = [[1035, 520, 1610, 900], [600, 95, 1050, 300], [320, 620, 640, 820]];
     // world keep-clear boxes and spots for the energy assets
-    const wrects = [[SS[0] - 14, SS[1] - 14, SS[0] + SS_W + 14, SS[1] + SS_D + 14], [SOLAR[0] - 14, SOLAR[1] - 14, SOLAR[0] + 100, SOLAR[1] + 76]];
+    const wrects = [[SS[0] - 14, SS[1] - 14, SS[0] + SS_W + 14, SS[1] + SS_D + 14], [SOLAR[0] - 14, SOLAR[1] - 14, SOLAR[0] + 100, SOLAR[1] + 76]]
+      .concat(HOMES.map(([x0, y0, x1, y1]) => [x0 - 8, y0 - 8, x1 + 8, y1 + 8]));
     const spots = WIND.map(([x, y]) => [x, y, 16]).concat(SOLAR_LINE.map(p => [p[0], p[1], 10]), [[HY[0] + 18, HY[1] + 6, 34], [BOOST[0] + 2, BOOST[1] + 3, 36]],
-      COLLECTORS.map(([x, y]) => [x, y, 14]));
+      FEEDERS.flat().map(([x, y]) => [x, y, 10]), [[DRONE_PAD[0] - 20, DRONE_PAD[1] + 10, 58]].concat(FLAG_SPOTS.map(([x, y]) => [x, y, 14])));
     const segsOf = l => l.slice(1).map((p, i) => [l[i], p]);
     const roadSegs = ROADS.concat(CITY_ST.map(seg => seg.map(p => [CITY[0] + p[0], CITY[1] + p[1]])), [PIPE]).flatMap(segsOf);
     const ringSegs = segsOf(RING_PTS.filter((p, i) => i % 2 === 0).concat([RING_PTS[0]]));
@@ -1043,6 +1048,45 @@
   }
 
   /* ---------- assemble ---------- */
+  /* One surveyor's tour (see SURVEYS): picks up to o.n poles and buildings by nearest neighbour from o.near, then walks them in
+     a loop, stopping 2.4 s at each to tag it with a phone. Each tag drops a pin (orange = pole, blue = meter) that stays until
+     the loop restarts, and fires a short burst up to the satellite. The figure is split over one depth slot per stop so it
+     passes in front of / behind what it walks by. Returns the pins + bursts, to be drawn above the wires. */
+  function surveyWalk(items, o, idx) {
+    const W = A.crew, EN = A.energy, D = (m, c) => Math.hypot(m.x - c[0], m.y - c[1]);
+    const pool = DBG.marks.filter(m => (m.kind === 'd' || m.kind === o.meters) && D(m, o.near) < o.r);
+    const tour = [];
+    let cur = o.near;
+    while (tour.length < o.n && pool.length) { pool.sort((p, q) => D(p, cur) - D(q, cur)); const m = pool.shift(); tour.push(m); cur = [m.x, m.y]; }
+    if (tour.length < 3) return '';
+    const stand = tour.map(m => m.kind === 'd' ? [m.x + 5, m.y + 8] : [m.x, m.y + (m.kind === 'h' ? 15 : 19)]);
+    const S = stand.map(p => P(p[0], p[1], 0)), SPEED = 12, DWELL = 2.4, key = [], at0 = [];
+    let t = 0;
+    tour.forEach((m, i) => {
+      at0.push(t);
+      key.push([t, S[i], 's' + i]);
+      t += DWELL;
+      const nx = (i + 1) % tour.length;
+      key.push([t, S[i], 'w' + nx]);
+      t += Math.max(1.5, Math.hypot(S[nx][0] - S[i][0], S[nx][1] - S[i][1]) / SPEED);
+    });
+    const DUR = Math.ceil(t), begin = -(idx * 11 + 3), pins = [], pose = {}, sat = [SITES.SAT[0] - CX, SITES.SAT[1] - CY + 13];
+    tour.forEach((m, i) => {
+      const ta = at0[i], isPole = m.kind === 'd', col = isPole ? '#ff8a1f' : '#2f8fe0', z = isPole ? 36 : 24;
+      // drawn 1.7x with a cyan ring underfoot so a surveyor reads at map scale
+      const big = inner => `<ellipse rx="6" ry="2.4" fill="#3aa8d8" opacity=".45"/><g transform="scale(1.7)">${inner}</g>`;
+      const p = { ['w' + i]: big(W.walk()), ['s' + i]: big(EN.pilot('phone', i * .3)) };
+      items.push([stand[i][0] + stand[i][1] + 2, W.actor(key, p, DUR, begin)]);
+      const pin = `<path d="M0 0C-3.4-3.6-3.4-8 0-9.6 3.4-8 3.4-3.6 0 0Z" fill="${col}" stroke="#fff" stroke-width=".7"/>` +
+        (isPole ? '<circle cy="-6" r="1.3" fill="#fff"/>' : '<rect x="-1.3" y="-7.3" width="2.6" height="2.6" fill="#fff"/>');
+      pins.push(W.during(T(m.x, m.y, z, pin), ta + .9, DUR - .01, DUR, begin) +
+        W.during(T(m.x, m.y, z - 4, `<circle r="2" fill="none" stroke="${col}" stroke-width="1"><animate attributeName="r" values="2;11" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0" dur="1.2s" repeatCount="indefinite"/></circle>`), ta + .5, ta + 1.7, DUR, begin) +
+        W.during(EN.link(P(stand[i][0], stand[i][1], 11), sat, '#3aa8d8', 1.1, 0, 2), ta + .7, ta + 2, DUR, begin));
+    });
+    mark('a', stand[0][0], stand[0][1], 'Spatial data collector (surveyor on foot, tags poles and meters)');
+    return pins.join('');
+  }
+
   function render() {
     vdefs = ''; vn = 0;
     DBG = { marks: [], movers: [], count: {} }; ORG = [0, 0];
@@ -1061,6 +1105,7 @@
     region(HW, hwange);
     pieces(REF, ref);
     pieces(CITY, city);
+    pieces([0, 0], homes);
     region(MSA, msasa);
     pieces(SUB, suburb);
     region(BEIRA, beira);
@@ -1075,9 +1120,19 @@
     items.push([-2500, WIND.map(([x, y]) => { const d = line([P(x, y, .3), P(sin[0], y, .3), P(sin[0], sin[1], .3)]); return `<path d="${d}" stroke="#6f8f4a" stroke-width="2.2" fill="none" opacity=".45"/><path d="${d}" stroke="#ffcf4d" stroke-width=".6" fill="none" class="flow" opacity=".55"/>`; }).join('')]);
     region(SOLAR, () => { mark('a', 32, 22, 'Solar PV plant'); return swap('09-energy/solar-plant', 0, 0, () => EN.solarFarm()); }, 40);
     lv(wput, SOLAR_LINE, [[0, [SOLAR[0] + 75, SOLAR[1] + 18, 7]]]);
+    // distribution feeders out of the substation (the Feruka feeder starts at the Msasa pole, drawn with the south feeder)
+    FEEDERS.forEach(fd => lv(wput, fd, [], fd === F_FER));
     hydro(items);
-    // spatial data collectors in the field, and the booster ground station
-    COLLECTORS.forEach(([x, y, k], i) => { mark('a', x, y, k === 'rover' ? 'Spatial data collector (GNSS survey rover)' : 'Spatial data collector (data logger)'); items.push([x + y, EN.collector(x, y, k, i * .4)]); });
+    // flags at every power station
+    FLAG_SPOTS.forEach(([x, y, name], i) => { mark('a', x, y, 'Flags (ZESA + Zimbabwe), ' + name); items.push([x + y + 4, at(x, y, EN.flags(i * .5))]); });
+    // the inspection crew: ZESA ladder truck, charging pad and the two pilots (the drone itself is drawn above the wires)
+    mark('c', DRONE_TRUCK[0], DRONE_TRUCK[1], 'ZETDC truck (drone crew, parked)');
+    items.push([DRONE_TRUCK[0] + DRONE_TRUCK[1], at(DRONE_TRUCK[0], DRONE_TRUCK[1], A.cars.car({ livery: 'zetdc-truck', cargo: 'ladder', dir: 1 }))]);
+    mark('a', DRONE_PAD[0], DRONE_PAD[1], 'Drone charging pad');
+    items.push([DRONE_PAD[0] + DRONE_PAD[1] - 20, at(DRONE_PAD[0], DRONE_PAD[1], EN.dronePad())]);
+    DRONE_PILOTS.forEach(([x, y], i) => { mark('a', x, y, 'Drone pilot ' + (i + 1)); items.push([x + y, at(x, y, EN.pilot(i ? 'viewer' : 'remote', i * .6))]); });
+    // spatial data collectors (surveyors on foot) and the booster ground station
+    const SURVEY_SVG = SURVEYS.map((o, i) => surveyWalk(items, o, i)).join('');
     region(BOOST, () => { mark('a', 0, 0, 'Data booster ground station'); return EN.booster(); }, 10);
     items.push([-2000, quay()]);
     items.push([-1999, tankerRun()]);
@@ -1097,7 +1152,7 @@
     A.map.mountains = MUTARE.concat(FALLS_HILLS).map(m => m.map(v => Math.round(v)));
     const big = MUTARE.slice().sort((p, q) => q[3] - p[3])[0], MT_LABEL = big && [big[0], big[1] - big[3] - 10];
     // power-line pylons
-    PYLONS.forEach(p => { mark('p', p[0], p[1], 'Pylon'); items.push([p[0] + p[1], pylon(p[0], p[1])]); });
+    PYLONS.forEach(p => { mark('p', p[0], p[1], 'Pylon'); items.push([p[0] + p[1], pylon(p[0], p[1], p[2] || 46)]); });
     // ring traffic (L = lane offset; + is the outer lane). Tankers are only drawn facing +x / +y
     // Vehicles sharing a lane or a junction share a lap time (top 18 s, left + Hwange 15 s / 3 s, port 8 s with the
     // 16 s bottom tankers) and are offset so they never meet; keep that when adding or retiming one.
@@ -1120,20 +1175,24 @@
     items.sort((a, b) => a[0] - b[0]);
     s += `<defs>${vdefs}</defs>` + items.map(i => i[1]).join('');
     LINES.forEach(l => { s += wires(l); });
-    // the main line loops in and out of the substation; the solar run and the hydro station tie into the REF line
-    s += tie([...LINE_MAIN[LINE_MAIN.length - 1], 38], SS_IN) + tie([...LINE_CITY[0], 38], SS_OUT);
+    // the main line lands on the substation's incoming gantry and the feeders leave from its outgoing one; the solar run
+    // ties into the main line's first pylon and the hydro station into its own pylon line
+    const ph = A.energy.POLE_H - 2;
+    s += tie([...LINE_MAIN[LINE_MAIN.length - 1], 38], SS_IN) + [F_CITY, F_REF, F_MSA].map(fd => tie(SS_OUT, [fd[0][0], fd[0][1], ph], [-3, 0, 3], [-5, 0, 5])).join('');
     s += tie([...side('left', 130, 32), 38], [...SOLAR_LINE[SOLAR_LINE.length - 1], A.energy.POLE_H - 2], [-11, 11], [-5, 5]);
     s += tie([...HY_PYLON, 38], [HY[0] + 38.5, HY[1] + 5.5, 12], [-11, 11], [-1.5, 1.5]);
+    // the inspection drone: lifts off the pad, scans five pylons (their tops light up), returns to charge, flies away
+    s += EN.droneMission({ pad: DRONE_PAD, pylons: DRONE_PYLONS, turn: DRONE_TURN, h: 46, away: [DRONE_PAD[0] - 170, DRONE_PAD[1] + 150, 95] });
     s += clouds();
     // GIS earth-observation satellite above the clouds, scanning the wind farm
     const [scx, scy] = SITES.SAT;
     mark('a', ...site('SAT'), 'GIS satellite');
     // spatial data chain: collectors -> satellite (uplink), satellite -> booster (downlink), booster -> ZESA HQ (microwave)
     const satDish = [scx - CX, scy - CY + 13], at3 = (o, p) => P(o[0] + p[0], o[1] + p[1], p[2]);
-    COLLECTORS.forEach(([x, y, k], i) => { s += A.energy.link(P(x, y, A.energy.COLLECTOR_TOP[k]), satDish, '#3aa8d8', 2.2 + i * .25, -i * .7); });
+    s += SURVEY_SVG;
     s += A.energy.link(satDish, at3(BOOST, A.energy.BOOSTER.dish), '#f2a93b', 1.8, 0, 3);
     s += A.energy.link(at3(BOOST, A.energy.BOOSTER.mw), at3(CITY, HQ_DISH), '#1f7fc0', 1.6, -.4, 3);
-    s += swap('09-energy/gis-satellite', ...site('SAT'), () => `<g transform="translate(${scx - CX},${scy - CY})">${A.energy.satBeam(240, 140, 50)}${A.energy.satellite()}</g>`);
+    s += swap('09-energy/gis-satellite', ...site('SAT'), () => `<g transform="translate(${scx - CX},${scy - CY})">${A.energy.satBeam(SAT_BEAM[0], SAT_BEAM[1], 50)}${A.energy.satellite()}</g>`);
     // labels
     s += tag(300, 150, '') + tag(215, 482, '') + tag(1290, 432, '') +
       tag(1250, 520, '') + tag(930, 820, '', 10) + tag(100, 598, '', 10) +
@@ -1144,7 +1203,7 @@
       .concat(ROADS.map((pts, i) => ({ code: 'r' + (i + 2), name: ROAD_NAMES[i], pts })))
       .concat(CITY_ST.map((seg, i) => ({ code: 'r' + (ROADS.length + 2 + i), name: 'City street', pts: seg.map(p => [CITY[0] + p[0], CITY[1] + p[1]]) })))
       .concat([{ code: 'pipe', name: 'NOIC pipeline Beira → Feruka → Msasa', pts: PIPE }]);
-    const LINE_NAMES = ['Hwange → REF village', 'Hwange → main substation', 'Substation → city', 'REF village → off map', 'Hwange → west (suburb)', 'Hwange → west', 'Ring → Msasa depot', 'Ring → Feruka → Beira', 'Down the coast'];
+    const LINE_NAMES = ['Hwange → main substation', 'Hydro station → main line', 'Hwange south → west (suburb)', 'Hwange → west'];
     DBG.lines = LINES.map((pts, i) => ({ code: 'l' + (i + 1), name: 'Power line: ' + (LINE_NAMES[i] || ''), pts }));
     DBG.count.r = DBG.roads.length - 1; DBG.count.l = DBG.lines.length;
     A.map.debug = DBG;

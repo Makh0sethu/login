@@ -348,7 +348,7 @@
         `<circle cy="-${fh + .6}" r=".9" fill="#f2c35c"/>` +
         `<g transform="translate(.6,-${fh - .5})"><path d="${d1}" fill="${fill}" stroke="#000" stroke-opacity=".15" stroke-width=".3">` +
         `<animate attributeName="d" values="${d1};${d2};${d1}" dur="2.2s" repeatCount="indefinite"/></path>` +
-        (opts.flagColor ? '' : `<path d="M0 0 L5.4 4 L0 8 Z" fill="#fff" stroke="#1b1b1b" stroke-width=".35"/><circle cx="1.8" cy="4" r=".9" fill="#d8262e"/>`) +
+        (opts.flagColor ? '' : `<path d="M0 0 L5.4 4 L0 8 Z" fill="#fff" stroke="#1b1b1b" stroke-width=".35"/><polygon points="1.90 2.55 2.22 3.56 3.28 3.55 2.42 4.17 2.75 5.17 1.90 4.55 1.05 5.17 1.38 4.17 0.52 3.55 1.58 3.56" fill="#d8262e"/><circle cx="1.9" cy="4" r=".45" fill="#ffd200"/>`) +
         `</g></g>`;
     }
     // sign board

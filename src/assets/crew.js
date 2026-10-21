@@ -1,11 +1,11 @@
 /* ZETDC line crew (Assets.crew): linemen in navy overalls, hi-vis vests and white hard hats, drawn in screen px
-   around their feet (the line-cart poses around the point on the wire), plus a traffic cone.
+   around their feet, plus the extension ladder they lean on a pole and a traffic cone.
    actor() moves one figure through a track of keyed poses on a loop timed like the vehicle it rides with. */
 (function () {
   const A = window.Assets;
   const f = n => { const v = Math.round(n * 100) / 100; return Object.is(v, -0) ? '0' : String(v); };
   const SKIN = '#6f4428', NAVY = '#2b3866', VEST = '#f08c2a', STRIPE = '#fff3c4', HAT = '#ffffff', HAT_SH = '#c9d3dd',
-    BOOT = '#23272c', BELT = '#3a2a1c', CART = '#f2c230';
+    BOOT = '#23272c', BELT = '#3a2a1c';
   const ln = (x1, y1, x2, y2, c, w) => `<path d="M${f(x1)} ${f(y1)}L${f(x2)} ${f(y2)}" stroke="${c}" stroke-width="${w}" stroke-linecap="round" fill="none"/>`;
   const hand = (x, y) => `<circle cx="${f(x)}" cy="${f(y)}" r=".55" fill="${SKIN}"/>`;
   const arm = (x1, y1, x2, y2) => ln(x1, y1, x2, y2, NAVY, 1.1) + hand(x2, y2);
@@ -33,27 +33,28 @@
   const spot = () => shadow + leg(-.8, -4.6, -1, -.4) + leg(.8, -4.6, 1, -.4) + torso() +
     swing(arm(-2, -8, -3.4, -11.4), -2, -8, [0, -12, 0], 1.8) + arm(2, -8, 2.4, -5.4) +
     `<rect x="2" y="-6.6" width="1" height="1.8" rx=".3" fill="${BOOT}"/><path d="M2.8 -6.6v-1" stroke="${BOOT}" stroke-width=".3"/>` + head();
-  // climbing the pole with spikes and a pole strap, seen from behind: hands and feet step up in turn
+  // the extension ladder carried on the shoulder (a short side view of it)
+  const shoulderLadder = `<path d="M-7 -9.9H6.5M-7 -8.5H6.5" stroke="#a9b4bf" stroke-width=".45"/>` +
+    [-6, -4, -2, 0, 2, 4, 6].map(x => `<path d="M${x} -9.9V-8.5" stroke="#c3ccd5" stroke-width=".3"/>`).join('');
+  const carry = () => walk() + shoulderLadder + hand(-1.2, -9.2) + hand(1.6, -9.2);
+  // climbing the ladder, seen from behind: hands and feet step up the rungs in turn
   const climb = () =>
-    step(leg(-.8, -4.6, -1.4, -1.2), '0 0;0 -1.6;0 0', .8) + step(leg(.8, -4.6, 1.4, -1.2), '0 -1.6;0 0;0 -1.6', .8) +
-    torso(0, true) + `<path d="M-2 -5.1Q-1.5 -6 -.8 -6.3M2 -5.1Q1.5 -6 .8 -6.3" stroke="${BELT}" stroke-width=".5" fill="none"/>` +
-    step(arm(-1.8, -8, -1, -11.6), '0 -1.4;0 0;0 -1.4', .8) + step(arm(1.8, -8, 1, -11.6), '0 0;0 -1.4;0 0', .8) + head(0, true);
-  // line cart riding the conductor: wheels on the wire at (0, 0), the lineman seated in a sling below
-  const cart = (work) => {
-    const frame = `<path d="M-2.4 -.9V2.2H2.4V-.9" stroke="${CART}" stroke-width=".8" fill="none" stroke-linejoin="round"/>` +
-      `<circle cx="-1.5" cy="-.9" r=".9" fill="#3a3f46"/><circle cx="1.5" cy="-.9" r=".9" fill="#3a3f46"/>` +
-      `<circle cx="-1.5" cy="-.9" r=".3" fill="#b2bfcc"/><circle cx="1.5" cy="-.9" r=".3" fill="#b2bfcc"/>`;
-    const sling = ln(-1.6, 2.2, -1.4, 8.6, BELT, .4) + ln(1.6, 2.2, 1.4, 8.6, BELT, .4) + ln(-1.8, 8.6, 1.8, 8.6, BELT, .7);
-    const y = 13;   // the seated body hangs with its hips at y 8.4
-    const body = ln(-.4, 8.6, 2.2, 9.2, NAVY, 1.5) + leg(2.2, 9.2, 2.6, 12) + ln(.4, 8.6, 3, 9, NAVY, 1.5) + leg(3, 9, 3.4, 11.8) +
-      `<g transform="translate(0 ${y})">${torso() + head()}</g>`;
-    const arms = work
-      ? arm(-1.8, 5, -1.6, 2.2) + swing(arm(1.8, 5, 2.8, .2) + `<path d="M2.8 .2l.9 -.9" stroke="#b2bfcc" stroke-width=".5"/>`, 1.8, 5, [0, -10, 0], .5)
-      : step(arm(-1.8, 5, -1.6, 2.2), '0 0;0 1;0 0', .7) + step(arm(1.8, 5, 1.6, 2.2), '0 1;0 0;0 1', .7);
-    // a spark of the crimping tool while it works on the conductor
-    const glint = work ? `<g transform="translate(3.6 -.6)"><path d="M0 -1.6L.4 -.4L1.6 0L.4 .4L0 1.6L-.4 .4L-1.6 0L-.4 -.4Z" fill="#fff6c4"><animate attributeName="opacity" values="0;1;0;0" dur=".5s" repeatCount="indefinite"/></path></g>` : '';
-    return frame + swing(sling + body + arms, 0, 0, [-4, 4, -4], 1.6) + glint;
-  };
+    step(leg(-.8, -4.6, -1.2, -1.2), '0 0;0 -1.6;0 0', .8) + step(leg(.8, -4.6, 1.2, -1.2), '0 -1.6;0 0;0 -1.6', .8) +
+    torso(0, true) + step(arm(-1.8, -8, -1.2, -11.6), '0 -1.4;0 0;0 -1.4', .8) + step(arm(1.8, -8, 1.2, -11.6), '0 0;0 -1.4;0 0', .8) + head(0, true);
+  // at the top of the ladder, working on the crossarm above his head: one hand holds on, the other works a tool
+  // that sparks against the fitting
+  const reach = () => leg(-.8, -4.6, -1.2, -.4) + leg(.8, -4.6, 1.2, -1.6) + torso(0, true) + arm(-1.8, -8, -1.4, -12.4) +
+    swing(arm(1.8, -8, 2.6, -12.6) + `<path d="M2.6 -12.6l.8 -1" stroke="#b2bfcc" stroke-width=".55"/>`, 1.8, -8, [0, -14, 0], .55) + head(0, true) +
+    `<g transform="translate(3.6 -14)"><path d="M0 -1.5L.4 -.4L1.5 0L.4 .4L0 1.5L-.4 .4L-1.5 0L-.4 -.4Z" fill="#fff6c4"><animate attributeName="opacity" values="0;1;0;0" dur=".55s" repeatCount="indefinite"/></path></g>`;
+  // footing the ladder, seen from behind: both hands on the rails, looking up
+  const hold = () => shadow + leg(-1, -4.6, -1.4, -.4) + leg(1, -4.6, 1.4, -.4) + torso(0, true) + arm(-1.9, -8, -1.3, -10.6) + arm(1.9, -8, 1.3, -10.6) + head(0, true);
+  // the ladder leant against a pole, from its foot to its top (screen points)
+  function ladder(foot, top) {
+    const dx = top[0] - foot[0], dy = top[1] - foot[1], len = Math.hypot(dx, dy), nx = -dy / len * 1.3, ny = dx / len * 1.3;
+    let s = ln(foot[0] - nx, foot[1] - ny, top[0] - nx, top[1] - ny, '#a9b4bf', .5) + ln(foot[0] + nx, foot[1] + ny, top[0] + nx, top[1] + ny, '#d5dde4', .5);
+    for (let u = .06; u < 1; u += 2 / len) s += ln(foot[0] + dx * u - nx, foot[1] + dy * u - ny, foot[0] + dx * u + nx, foot[1] + dy * u + ny, '#c3ccd5', .3);
+    return s;
+  }
   const cone = () => `<ellipse rx="1.8" ry=".65" fill="#d4741a"/><path d="M-1.3 0L-.35 -3.6H.35L1.3 0Z" fill="${VEST}"/><path d="M-.9 -1.6H.9" stroke="#fff" stroke-width=".6"/>`;
 
   /* one figure on a loop of dur s (begin as its vehicle): track keys are [s, [sx, sy], pose]. It moves in straight lines
@@ -78,5 +79,5 @@
   const during = (inner, t0, t1, dur, begin) =>
     `<g visibility="hidden">${inner}<animate attributeName="visibility" values="hidden;visible;hidden" keyTimes="0;${+(t0 / dur).toFixed(5)};${+(t1 / dur).toFixed(5)}" calcMode="discrete" dur="${dur}s" begin="${begin}s" repeatCount="indefinite"/></g>`;
 
-  A.crew = { stand, walk, crouch, spot, climb, cart, cone, actor, during };
+  A.crew = { stand, walk, carry, crouch, spot, climb, reach, hold, ladder, cone, actor, during };
 })();

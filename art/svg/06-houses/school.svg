@@ -464,7 +464,7 @@
       <stop offset=".6" stop-color="#cdd6df"/>
       <stop offset="1" stop-color="#7d8a98"/>
     </linearGradient>
-    <linearGradient id="linear-gradient12" x1="-144" y1="520" x2="-144" y2="519" gradientTransform="translate(7693.1 18655.1) scale(52 -35.7)" gradientUnits="userSpaceOnUse">
+    <linearGradient id="linear-gradient12" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#2e9a48"/>
       <stop offset=".1" stop-color="#2e9a48"/>
       <stop offset=".1" stop-color="#ffd200"/>
@@ -603,7 +603,7 @@
         <animate accumulate="none" additive="replace" attributeName="d" calcMode="linear" dur="2.2s" fill="remove" repeatCount="indefinite" restart="always" values="M 183.2 111.1 C 199.2 104.7 215.2 117.5 235.2 111.1 L 235.2 143.1 C 215.2 149.5 199.2 136.7 183.2 143.1 Z;M 183.2 111.1 C 199.2 116.7 215.2 105.5 235.2 113.9 L 235.2 145.9 C 215.2 137.5 199.2 148.7 183.2 143.1 Z;M 183.2 111.1 C 199.2 104.7 215.2 117.5 235.2 111.1 L 235.2 143.1 C 215.2 149.5 199.2 136.7 183.2 143.1 Z"/>
       </path>
       <path class="st27" d="M183.2,111.1l21.6,16-21.6,16v-32Z"/>
-      <circle class="st69" cx="190.4" cy="127.1" r="3.6"/>
+      <polygon class="st69" points="190.4 120.7 191.9 125.0 196.5 125.1 192.9 127.9 194.2 132.3 190.4 129.7 186.6 132.3 187.9 127.9 184.3 125.1 188.9 125.0"/><circle cx="190.4" cy="127.1" r="1.6" fill="#ffd200"/>
     </g>
   </g>
   <polygon class="st32" points="33.7 154.3 92.4 188.3 85.7 192.3 26.9 158.3 33.7 154.3"/>

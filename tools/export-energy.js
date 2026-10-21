@@ -20,7 +20,7 @@ const FRAMES = {
   'substation': [-51, -24, 115.9, 87.8],
   'distribution-pole': [-11.6, -30, 23.2, 37.2],
   'distribution-pole-transformer': [-11.6, -30, 23.2, 37.2],
-  'gis-satellite': [-43, -28.5, 345, 201.5]
+  'gis-satellite': [-205, -28.5, 265, 150]
 };
 
 // load the asset scripts into one shared global scope (iso.js declares its helpers as top-level consts)
@@ -41,7 +41,7 @@ const DRAW = {
   'substation': () => E.substation({ w: 64, d: 48 }),
   'distribution-pole': () => E.pole(0, 0),
   'distribution-pole-transformer': () => E.pole(0, 0, { tx: true }),
-  'gis-satellite': () => E.satBeam(240, 140, 50) + E.satellite()
+  'gis-satellite': () => E.satBeam(-130, 85, 50) + E.satellite()
 };
 
 // the map's animation classes (from index.html)

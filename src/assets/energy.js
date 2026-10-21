@@ -290,7 +290,10 @@
     const leg = (x1, x2) => `<path d="M${x1 * .8} -4.6L${x2} -.4" stroke="#2b3866" stroke-width="1.5" stroke-linecap="round"/><ellipse cx="${x2}" cy="-.4" rx=".9" ry=".5" fill="#23272c"/>`;
     let g = `<ellipse rx="2.4" ry=".9" fill="#0b1e33" opacity=".18"/>` + leg(-1, -1) + leg(1, 1) +
       `<rect x="-2" y="-8.6" width="4" height="4.4" rx="1" fill="#f08c2a"/><path d="M-2 -6.6h4" stroke="#fff3c4" stroke-width=".55"/><path d="M-2 -4.5h4" stroke="#3a2a1c" stroke-width=".6"/>`;
-    if (kind === 'remote') {
+    if (kind === 'phone') {      // a surveyor tagging a location: phone held out in front, screen glowing
+      g += arm(-1.8, -8, -1, -6.4) + arm(1.8, -8, 1.6, -6.4) +
+        `<rect x="-1.5" y="-8.6" width="3" height="3.4" rx=".5" fill="#23272c"/><rect x="-1.1" y="-8.2" width="2.2" height="2.6" fill="#7fe0ff" class="glow" style="animation-delay:${delay}s"/>`;
+    } else if (kind === 'remote') {
       g += arm(-1.8, -8, -2.2, -6.2) + arm(1.8, -8, 2.2, -6.2) +
         `<rect x="-3" y="-7.2" width="6" height="2.6" rx=".6" fill="#23272c"/><circle cx="-1.6" cy="-5.9" r=".7" fill="#7d8b99"/><circle cx="1.6" cy="-5.9" r=".7" fill="#7d8b99"/>` +
         `<path d="M-2.4 -7.2L-3.4 -9.6M2.4 -7.2L3.4 -9.6" stroke="#23272c" stroke-width=".5"/><circle cx="3.4" cy="-9.8" r=".5" fill="#4f9a5d" class="glow" style="animation-delay:${delay}s"/>`;
@@ -300,13 +303,45 @@
     }
     return g + `<circle cy="-9.9" r="1.45" fill="#6f4428"/><path d="M-1.7 -10.3a1.7 1.6 0 0 1 3.4 0z" fill="#fff"/><path d="M-2.1 -10.3h4.2" stroke="#c9d3dd" stroke-width=".5"/>`;
   }
-  // charging pad (local iso frame, centred on its anchor): a dark slab with yellow edge and a bolt
+  /* ---------- ZESA crest + the flags flown at the power stations ---------- */
+  A.addDefs(`<clipPath id="en-crest-clip"><path d="M-34 -20L-34 16Q-33 36 0 48Q33 36 34 16L34 -20L18 -25L0 -21L-18 -25Z"/></clipPath>`);
+  // the ZESA coat of arms redrawn as vectors (same colours as logos/zesa.png): bird on a tower over a shield of sky,
+  // green land, river waves and a torch burst, with the yellow ribbon. Centred on (0, 0), about 100 wide and 140 tall.
+  function zesaCrest() {
+    const N = '#000080', shield = 'M-34 -20L-34 16Q-33 36 0 48Q33 36 34 16L34 -20L18 -25L0 -21L-18 -25Z';
+    const star = Array.from({ length: 16 }, (_, i) => { const a = i * Math.PI / 8, r = i % 2 ? 6 : 12; return f(18 + r * Math.cos(a)) + ' ' + f(24 + r * Math.sin(a)); }).join(' ');
+    return `<g transform="translate(0,-4)">` +
+      `<rect x="-6" y="-46" width="12" height="26" fill="#ffff00" stroke="${N}" stroke-width="2.4"/><ellipse cx="2" cy="-53" rx="13" ry="7" fill="#ffff00" stroke="${N}" stroke-width="2.4"/><circle cx="-8" cy="-60" r="4.6" fill="#ffff00" stroke="${N}" stroke-width="2.2"/>` +
+      `<g clip-path="url(#en-crest-clip)"><rect x="-40" y="-30" width="80" height="26" fill="#00ffff"/><rect x="-40" y="-4" width="80" height="12" fill="#00ff00"/>` +
+      `<rect x="-40" y="8" width="40" height="46" fill="#ffff00"/><path d="M-40 18Q-30 12 -20 18T0 18M-40 29Q-30 23 -20 29T0 29M-40 40Q-30 34 -20 40T0 40" stroke="${N}" stroke-width="3.4" fill="none"/>` +
+      `<rect x="0" y="8" width="40" height="46" fill="#ff0000"/><polygon points="${star}" fill="#ffffff"/><rect x="15" y="22" width="6" height="14" fill="#ffff00" stroke="${N}" stroke-width="1.6"/></g>` +
+      `<path d="${shield}" fill="none" stroke="${N}" stroke-width="5" stroke-linejoin="round"/>` +
+      `<path d="M-50 42Q-25 58 0 54Q25 58 50 42L50 62Q25 76 0 70Q-25 76 -50 62Z" fill="#ffff00" stroke="${N}" stroke-width="3.4" stroke-linejoin="round"/></g>`;
+  }
+  // charging pad (local iso frame, centred on its anchor): a dark slab with a yellow edge and the ZESA crest
   function dronePad() {
     const [bx, by] = P(0, 0, .5);
-    return `<ellipse cy="1" rx="11" ry="5" fill="#0b1e33" opacity=".14"/>` +
-      poly([P(-8, -8, .4), P(8, -8, .4), P(8, 8, .4), P(-8, 8, .4)], '#56626f', 'stroke="#f2c230" stroke-width=".7"') +
-      poly([P(-6, -6, .5), P(6, -6, .5), P(6, 6, .5), P(-6, 6, .5)], '#3f4954') +
-      `<path d="M${f(bx + 1)} ${f(by - 3.6)}L${f(bx - 2.4)} ${f(by + .4)}H${f(bx)}L${f(bx - 1)} ${f(by + 3.6)}L${f(bx + 2.4)} ${f(by - .4)}H${f(bx)}Z" fill="#f2c230"/>`;
+    return `<ellipse cy="1" rx="14" ry="7" fill="#0b1e33" opacity=".14"/>` +
+      poly([P(-10, -10, .4), P(10, -10, .4), P(10, 10, .4), P(-10, 10, .4)], '#56626f', 'stroke="#f2c230" stroke-width=".8"') +
+      poly([P(-8.4, -8.4, .5), P(8.4, -8.4, .5), P(8.4, 8.4, .5), P(-8.4, 8.4, .5)], '#f4f7fa') +
+      `<g transform="translate(${f(bx)},${f(by)}) scale(.17,.1)">${zesaCrest()}</g>`;
+  }
+  // a pole with the Zimbabwe flag and a ZESA flag, streaming to the right and rippling (screen px around the foot of the pole)
+  function flags(delay = 0) {
+    const H = 30, W = 11, Hh = 7, wave = (d, amp) => `<animateTransform attributeName="transform" type="skewY" values="0;${-amp};0;${amp};0" dur="2.6s" begin="${d}s" repeatCount="indefinite"/>`;
+    const zim = () => {
+      const colours = ['#1b8a3a', '#ffd200', '#d4211f', '#000000', '#d4211f', '#ffd200', '#1b8a3a'], sh = Hh / 7;
+      return colours.map((c, i) => `<rect x="0" y="${f(i * sh)}" width="${W}" height="${f(sh + .15)}" fill="${c}"/>`).join('') +
+        `<path d="M0 0L4.6 ${Hh / 2}L0 ${Hh}Z" fill="#ffffff" stroke="#000" stroke-width=".35"/><circle cx="1.5" cy="${Hh / 2}" r=".8" fill="#d4211f"/><circle cx="1.7" cy="${Hh / 2}" r=".3" fill="#ffd200"/>`;
+    };
+    // the ZESA flag: white cloth with the logo (logos/zesa.png, 3118 x 3975) centred on it
+    const LH = Hh - 1.2, LW = LH * 3118 / 3975;
+    const zesa = () => `<rect x="0" y="0" width="${W}" height="${Hh}" fill="#ffffff" stroke="#000080" stroke-width=".35"/>` +
+      `<image href="${A.url('logos/zesa.png')}" x="${f((W - LW) / 2)}" y=".6" width="${f(LW)}" height="${f(LH)}" preserveAspectRatio="xMidYMid meet"/>`;
+    const pole = x => `<path d="M${x} 0V${-H - 1}" stroke="#b2bfcc" stroke-width=".9"/><circle cx="${x}" cy="${-H - 1.4}" r="1" fill="#f2c230"/>`;
+    const cloth = (x, y, inner, d, amp) => `<g transform="translate(${x},${y})"><g>${wave(d, amp)}${inner}</g></g>`;
+    return `<ellipse cx="3" cy="1" rx="8" ry="2.4" fill="#0b1e33" opacity=".16"/>` + pole(0) + pole(-12.5) +
+      cloth(.4, -H, zim(), delay, 5) + cloth(-12.1, -H, zesa(), delay + .7, 5);
   }
   // the quadcopter in screen px around its body: rotors flicker, a camera ball hangs underneath
   function droneBody() {
@@ -319,17 +354,21 @@
       `<circle cx="-2.6" cy="2" r=".7" fill="#e04a3f" class="glow"/><circle cx="2.6" cy="2" r=".7" fill="#4f9a5d" class="glow" style="animation-delay:.5s"/>`;
   }
   /* The whole inspection as one looping SMIL timeline (every part shares it, so they stay in step): the drone sits on its
-     pad, rises, flies to each of o.pylons in turn and hovers over it while scanning, comes back, lands and charges for
-     2 s, lifts off again, flies away and fades out. Each pylon's top glows while it is scanned and stays lit, with a
-     tick, until the drone has gone. o.pad = [x, y], o.pylons = [[x, y], ...] (pylon height o.h), o.away = [x, y, z].
+     pad, rises, flies to each of o.pylons in turn and hovers over it while scanning, goes on to o.turn (if given) and comes back, lands and charges for
+     2 s, lifts off again, flies away and fades out. Each pylon's top glows only while the drone is over it, with a
+     tick as it moves on. o.pad = [x, y], o.pylons = [[x, y], ...] (pylon height o.h), o.away = [x, y, z].
      Returns SVG in screen px, to draw above the wires. */
   function droneMission(o) {
     const h = o.h || 46, Z = h + 18, [px, py] = o.pad, pyl = o.pylons, REST = 2.5;
     const keys = [], k = (t, x, y, z) => keys.push([t, x, y, z]), hold = [];   // hold: [arrive, leave] over each pylon
+    const SPEED = 38, leg = (x0, y0, x1, y1) => Math.max(2, Math.hypot(x1 - x0, y1 - y0) / SPEED);   // world units per second
+    let cx = px, cy = py;
     k(0, px, py, REST); k(2, px, py, REST); k(5, px, py, Z);
     let t = 5;
-    pyl.forEach(([x, y]) => { const ta = t + 2.4, te = ta + 2; k(ta, x, y, Z); k(te, x, y, Z); hold.push([ta, te]); t = te; });
-    const tBack = t + 6.5, tLand = tBack + 2.2, tCharged = tLand + 2, tUp = tCharged + 2, tGone = tUp + 5.2, DUR = Math.ceil(tGone + 5);
+    pyl.forEach(([x, y, ph = h]) => { const ta = t + leg(cx, cy, x, y), te = ta + 2; k(ta, x, y, ph + 18); k(te, x, y, ph + 18); hold.push([ta, te]); t = te; cx = x; cy = y; });
+    // optional turning point beyond the last pylon (the wind plant): the drone circles over it for a few seconds
+    if (o.turn) { const [x, y, z] = o.turn, ta = t + leg(cx, cy, x, y), te = ta + 3.5; k(ta, x, y, z); k(te, x, y, z); t = te; cx = x; cy = y; }
+    const tBack = t + leg(cx, cy, px, py), tLand = tBack + 2.2, tCharged = tLand + 2, tUp = tCharged + 2, tGone = tUp + 5.2, DUR = Math.ceil(tGone + 5);
     k(tBack, px, py, Z); k(tLand, px, py, REST); k(tCharged, px, py, REST); k(tUp, px, py, 36); k(tGone, ...o.away); k(DUR, ...o.away);
     const kt = fr => fr.map(q => (q[0] / DUR).toFixed(4)).join(';');
     const move = proj => `<animateTransform attributeName="transform" type="translate" calcMode="spline" values="${keys.map(q => proj(q).map(f).join(' ')).join(';')}" keyTimes="${kt(keys)}" keySplines="${Array(keys.length - 1).fill('.45 0 .55 1').join(';')}" dur="${DUR}s" repeatCount="indefinite"/>`;
@@ -342,19 +381,18 @@
     };
     const charging = [[tLand, 0], [tLand + .3, 1], [tCharged - .2, 1], [tCharged + .2, 0]];
     const flying = [[0, 0], [.6, 1], [tGone - 1.8, 1], [tGone, 0]];
-    const lit = tUp + 1;      // the highlights fade once the drone is up and away
     let s = `<ellipse rx="7" ry="2.6" fill="#0b1e33" opacity="0">${track('opacity', flying.map(([a, v]) => [a, v * .16]))}${move(q => P(q[1], q[2], 0))}</ellipse>`;
     // glowing pylon tops: a scan box while the drone is over it, then a steady glow and a tick
-    pyl.forEach(([x, y], i) => {
-      const [ta, te] = hold[i], arms = `M-2.9 -${h - 16}L-1.2 -${h}M2.9 -${h - 16}L1.2 -${h}M-11 -${h - 8}H11M-8 -${h - 2}H8`;
-      const scanning = [[ta - .2, 0], [ta + .3, 1], [ta + .7, .5], [ta + 1.1, 1], [ta + 1.5, .55], [te, .85], [lit, .85], [lit + 1.6, 0]];
-      const ticked = [[te - .2, 0], [te + .3, 1], [lit, 1], [lit + 1.6, 0]];
+    pyl.forEach(([x, y, ph = h], i) => {
+      const [ta, te] = hold[i], arms = `M-2.9 -${ph - 16}L-1.2 -${ph}M2.9 -${ph - 16}L1.2 -${ph}M-11 -${ph - 8}H11M-8 -${ph - 2}H8`;
+      const scanning = [[ta - .3, 0], [ta + .2, 1], [ta + .6, .5], [ta + 1, 1], [ta + 1.4, .55], [te - .1, .9], [te + .5, 0]];   // lit only while the drone is over it
+      const ticked = [[te - .6, 0], [te - .2, 1], [te + .6, 1], [te + 1, 0]];
       s += T(x, y, 0, `<g opacity="0">${track('opacity', scanning)}` +
-        `<rect x="-13" y="${-(h + 5)}" width="26" height="22" rx="6" fill="#3dffb0" fill-opacity=".2" stroke="#3dffb0" stroke-width=".9" stroke-dasharray="3 2"/>` +
+        `<rect x="-13" y="${-(ph + 5)}" width="26" height="22" rx="6" fill="#3dffb0" fill-opacity=".2" stroke="#3dffb0" stroke-width=".9" stroke-dasharray="3 2"/>` +
         `<path d="${arms}" stroke="#3dffb0" stroke-width="2" stroke-linecap="round" fill="none"/><path d="${arms}" stroke="#fff" stroke-width=".6" stroke-linecap="round" fill="none"/>` +
-        `<circle cx="-11" cy="-${h - 8}" r="1.9" fill="#fff" stroke="#3dffb0" stroke-width=".8"/><circle cx="11" cy="-${h - 8}" r="1.9" fill="#fff" stroke="#3dffb0" stroke-width=".8"/>` +
-        `<path d="M-13 0H13" stroke="#fff" stroke-width=".9" opacity=".9"><animateTransform attributeName="transform" type="translate" values="0 -${h + 4};0 -${h - 16};0 -${h + 4}" dur=".9s" repeatCount="indefinite"/></path></g>` +
-        `<g opacity="0" transform="translate(18,-${h + 6})">${track('opacity', ticked)}<circle r="4.2" fill="#2fbf71" stroke="#fff" stroke-width=".8"/><path d="M-2 0l1.5 1.6 2.8-3.2" stroke="#fff" stroke-width="1.1" fill="none" stroke-linecap="round"/></g>`);
+        `<circle cx="-11" cy="-${ph - 8}" r="1.9" fill="#fff" stroke="#3dffb0" stroke-width=".8"/><circle cx="11" cy="-${ph - 8}" r="1.9" fill="#fff" stroke="#3dffb0" stroke-width=".8"/>` +
+        `<path d="M-13 0H13" stroke="#fff" stroke-width=".9" opacity=".9"><animateTransform attributeName="transform" type="translate" values="0 -${ph + 4};0 -${ph - 16};0 -${ph + 4}" dur=".9s" repeatCount="indefinite"/></path></g>` +
+        `<g opacity="0" transform="translate(18,-${ph + 6})">${track('opacity', ticked)}<circle r="4.2" fill="#2fbf71" stroke="#fff" stroke-width=".8"/><path d="M-2 0l1.5 1.6 2.8-3.2" stroke="#fff" stroke-width="1.1" fill="none" stroke-linecap="round"/></g>`);
     });
     // charging ring on the pad
     s += T(px, py, 0, `<ellipse rx="9" ry="4.4" fill="none" stroke="#ffd34d" stroke-width="1.2" opacity="0">${track('opacity', charging)}<animate attributeName="rx" values="6;11;6" dur=".8s" repeatCount="indefinite"/><animate attributeName="ry" values="3;5.3;3" dur=".8s" repeatCount="indefinite"/></ellipse>`);
@@ -367,5 +405,5 @@
   }
 
   A.energy = { windTurbine, solarFarm, hydroHouse, biogas, substation, pole, poleWires, drop, satellite, satBeam, POLE_H,
-    dish, collector, COLLECTOR_TOP, booster, BOOSTER, link, pilot, dronePad, droneMission };
+    dish, collector, COLLECTOR_TOP, booster, BOOSTER, link, pilot, dronePad, droneMission, zesaCrest, flags };
 })();
