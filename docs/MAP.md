@@ -9,12 +9,18 @@ artwork drawn from `art/svg/` (see *Importing artwork*).
 ```
 index.html                 page shell + sign-in form; loads the scripts and renders the map
 demo/index.html            map-only pan/zoom demo (no sign-in); built by tools/build-demo.js into dist-demo/,
-                           live at ui.uhambo.co.zw/energy-map/ (one file, manual scp, not linked from the website)
+                           live at ui.uhambo.co.zw/energy-map/ (one file, manual scp, not linked from the website).
+                           It runs the scene tour (src/tour.js); any touch stops it, and it resumes after 20 s idle
 src/                       framework + the map
   core.js                  window.Assets registry, shared <defs> (Assets.addDefs / mountDefs)
   iso.js                   isometric helpers: P(x,y,z), box, cyl, poly, T, label, lamp, person, fence, packet, C colours
   map.js                   the landscape: SITES, terrain, rivers, ocean, roads, regions, traffic, power, trees
   exports.js               Assets.ex: draws a file from art/svg on the map
+  tour.js                  Assets.tour: the scene tour on the sign-in page and the demo. Whole map 8 s, zoom into an
+                           active scene 4 s, hold 8 s, zoom out 4 s. ZESA scenes come first in each round. Zoom-ins
+                           are timed so they land while the scene's action runs (Assets.map.acts, from map.js), so the
+                           zoomed-out wait can stretch. On the sign-in page each scene is fitted into the open screen
+                           space around the form, header and footer (phones have none, so they stay zoomed out)
   debug.js                 the debug overlay (bug button, bottom right)
   assets/                  one file per asset family, each returning SVG strings
     silos.js marine.js tanks.js trucks.js cars.js houses.js buildings.js terrain.js textures.js energy.js crew.js roads.js
@@ -70,7 +76,7 @@ archive/                   unused logos and old file versions, kept for referenc
 | Garden blocks | none at the moment (the inner right side was crowded, so `HOMES` is empty); add world `[x0, y0, x1, y1]` entries to build some | `HOMES`, `homes()`; each block's pole run starts at a south-feeder pole |
 | NOIC Msasa tank farm | bottom centre | anchor `MSA`, `msasa()` |
 | Mutare mountains + Feruka depot | bottom-left of centre | `mountain()` list in `render()`, `FER`, `feruka()` |
-| Beira port, ocean, tanker, rig, small boats | bottom-left corner | `OCEAN` polygon, `BEIRA`, `quay()`. `tankerRun()` sails the tanker in, offloads at the jetty, sails out and returns (one 56 s loop). `boats()` adds six small boats on random sea lanes, new on every load |
+| Beira port, ocean, tanker, rig, small boats | bottom-left corner | `OCEAN` polygon, `BEIRA`, `quay()`. `tankerRun()` sails the tanker in, offloads at the jetty, sails out and returns (one 28 s loop). `boats()` adds six small boats on random sea lanes, new on every load |
 | Suburb with Petrotrade #1 | left | anchor `SUB`, `suburb()` |
 | Pipeline Beira → Feruka → Msasa | bottom | `PIPE`, `pipeline()` |
 | Wind farm + main substation | the wind farm fills the top of the inner field, under the ring road's top side; the main substation is inside the ring by the right corner | `WIND` (`[x, y, height]`), `SS` / `SS_W` / `SS_D`. Buried collector cables run from each turbine to the substation |

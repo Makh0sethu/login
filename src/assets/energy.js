@@ -357,6 +357,8 @@
      pad, rises, flies to each of o.pylons in turn and hovers over it while scanning, goes on to o.turn (if given) and comes back, lands and charges for
      2 s, lifts off again, flies away and fades out. Each pylon's top glows only while the drone is over it, with a
      tick as it moves on. o.pad = [x, y], o.pylons = [[x, y], ...] (pylon height o.h), o.away = [x, y, z].
+     o.act (optional, an object) is filled with when the pad is busy, for the scene tour: { every, start, dur } in seconds,
+     from the drone coming back to the pad, through charging and the next lift-off, to it scanning the first pylon.
      Returns SVG in screen px, to draw above the wires. */
   function droneMission(o) {
     const h = o.h || 46, Z = h + 18, [px, py] = o.pad, pyl = o.pylons, REST = 2.5;
@@ -369,6 +371,7 @@
     // optional turning point beyond the last pylon (the wind plant): the drone circles over it for a few seconds
     if (o.turn) { const [x, y, z] = o.turn, ta = t + leg(cx, cy, x, y), te = ta + 3.5; k(ta, x, y, z); k(te, x, y, z); t = te; cx = x; cy = y; }
     const tBack = t + leg(cx, cy, px, py), tLand = tBack + 2.2, tCharged = tLand + 2, tUp = tCharged + 2, tGone = tUp + 5.2, DUR = Math.ceil(tGone + 5);
+    if (o.act) Object.assign(o.act, { every: DUR, start: tBack - 2, dur: DUR - tBack + 2 + hold[0][1] });
     k(tBack, px, py, Z); k(tLand, px, py, REST); k(tCharged, px, py, REST); k(tUp, px, py, 36); k(tGone, ...o.away); k(DUR, ...o.away);
     const kt = fr => fr.map(q => (q[0] / DUR).toFixed(4)).join(';');
     const move = proj => `<animateTransform attributeName="transform" type="translate" calcMode="spline" values="${keys.map(q => proj(q).map(f).join(' ')).join(';')}" keyTimes="${kt(keys)}" keySplines="${Array(keys.length - 1).fill('.45 0 .55 1').join(';')}" dur="${DUR}s" repeatCount="indefinite"/>`;

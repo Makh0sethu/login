@@ -67,6 +67,9 @@
      w wind turbines, p pylons, d distribution poles, a other assets. Positions are world units; mark() adds ORG,
      the anchor of the site being drawn (set by region() / pieces() in render()). */
   let DBG = null, ORG = [0, 0];
+  /* when the animated scenes are busy, for the scene tour (src/tour.js): name -> { every, start, dur } in seconds of the
+     map's SMIL clock: the action runs from start + k * every for dur seconds (start may be negative) */
+  const ACTS = {};
   const nextCode = kind => kind + (DBG.count[kind] = (DBG.count[kind] || 0) + 1);
   function mark(kind, x, y, name, z = 0) { if (DBG) DBG.marks.push({ code: nextCode(kind), kind, x: ORG[0] + x, y: ORG[1] + y, z, name }); }
   const LIVERY = { zetdc: 'ZETDC pickup', 'zetdc-truck': 'ZETDC truck', moepd: 'MoEPD SUV', zera: 'ZERA EV', petrotrade: 'Petrotrade tanker', noic: 'NOIC tanker' };
@@ -599,7 +602,7 @@
     // school
     put(-98, swap('06-houses/school', -128, 2, () => H.school(-128, 2, { delay: .3 })));
     // thatched huts, well apart
-    [[2, 14], [30, 30], [-4, 50], [54, 54], [82, 30], [26, 76], [96, 72]].forEach(([x, y], i) => put(x + y, HUT(x, y, { r: 7, lit: i % 2 === 0, delay: i * .4 })));
+    [[10, 8], [30, 30], [-4, 50], [54, 54], [82, 30], [26, 76], [96, 72]].forEach(([x, y], i) => put(x + y, HUT(x, y, { r: 7, lit: i % 2 === 0, delay: i * .4 })));
     // biogas plant behind the school, piping gas to its kitchen
     put(-155, swap('09-energy/biogas-plant', -150, -40, () => at(-150, -40, A.energy.biogas())));
     const gas = [P(-104, -34, 1), P(-98, -34, 1), P(-98, 2, 1)];
@@ -610,7 +613,7 @@
     lv(put, [[-84, 62], [-34, 56], [-34, 6]], [], true);
     lv(put, [[-34, 6], [-34, -28, 'tx'], [-6, -62], [70, -60]], [[2, [-15, -72, 12]], [3, [48, -64, 12]]], true);
     lv(put, [[-34, -28], [-80, -56], [-96, -8]], [[1, [-79, -64, 14]], [2, [-110, 2, 12]], [2, [-111, -26, 9]]], true);
-    lv(put, [[-34, -28], [-8, 2], [14, 42], [40, 62], [74, 50]], [[1, [2, 14, 9]], [2, [30, 30, 9]], [2, [-4, 50, 9]], [3, [54, 54, 9]], [3, [26, 76, 9]], [4, [82, 30, 9]], [4, [96, 72, 9]]], true);
+    lv(put, [[-34, -28], [-8, 2], [14, 42], [40, 62], [74, 50]], [[1, [10, 8, 9]], [2, [30, 30, 9]], [2, [-4, 50, 9]], [3, [54, 54, 9]], [3, [26, 76, 9]], [4, [82, 30, 9]], [4, [96, 72, 9]]], true);
     put(-16, person(-54, 36, '#e04a3f') + person(-50, 38, '#1f7fc0'));
     put(50, person(40, 10, '#f2c35c'));
     put(-76, lamp(-66, -10, 20)); put(-16, lamp(14, -30, 20));
@@ -623,7 +626,7 @@
     // parked at (-20, 8) facing -y with the pole on its near side: both get out of the near side; the truck's piece is
     // drawn at depth 3, so the crew goes just in front of it
     lineCrew(put, schedule(route, lap, stops).arrive[6], lap, -3, {
-      pole: [-8, 2], foot: [-3.5, 2.5], hold: [-.5, 1], doorA: [-13.5, 1], doorB: [-13.5, 12], cone: [-17, -10], d: 3.5 });
+      pole: [-8, 2], foot: [-3.5, 2.5], hold: [-.5, 1], doorA: [-13.5, 1], doorB: [-13.5, 12], cone: [-17, -10], d: 3.5, act: 'crewREF' });
   }
   /* a parked line truck's two linemen, from t0 s into its lap for the 20 s it stands by a pole (all local [x, y]).
      B takes the extension ladder from the truck at doorB, carries it to the pole, leans it from `foot` up to the crossarm
@@ -632,6 +635,7 @@
      d is the crew's depth, picked against the truck's own (in front of it when the pole is on its near side). */
   function lineCrew(put, t0, dur, begin, o) {
     const W = A.crew, top = [o.pole[0] + .6, o.pole[1] + .6, 20];
+    if (o.act) ACTS[o.act] = { every: dur, start: t0 + begin, dur: 18.6 };   // from A leaving the truck to both back at it
     // a point u of the way up the ladder
     const rung = u => P(o.foot[0] + (top[0] - o.foot[0]) * u, o.foot[1] + (top[1] - o.foot[1]) * u, top[2] * u);
     const A1 = [], B1 = [], key = (k, s, p, pose) => k.push([t0 + s, p, pose]);
@@ -740,7 +744,7 @@
     const crewRoute = [[128, -134.5], [162, -134.5], [174, -134.5]], crewLap = 26, crewStops = { 1: 20 };
     go('car', { livery: 'zetdc-truck', cargo: 'ladder' }, crewRoute, crewLap, -5, crewStops);
     lineCrew(put, schedule(crewRoute, crewLap, crewStops).arrive[1], crewLap, -5, {
-      pole: [122, -145], foot: [125.5, -141.5], hold: [128, -139.5], doorA: [169, -141], doorB: [153, -141], cone: [138, -136], d: -15 });
+      pole: [122, -145], foot: [125.5, -141.5], hold: [128, -139.5], doorA: [169, -141], doorB: [153, -141], cone: [138, -136], d: -15, act: 'crewCity' });
   }
   // the garden blocks inside the ring (world units, drawn as pieces like the city): four houses and a tree
   // per block, and a pole run along the block's open front edge (in front of the houses, so the poles show) from the south
@@ -858,11 +862,12 @@
      offloads through a hose, turns and sails out heading +y (the +x drawing mirrored), and stays away until the next
      visit. Times in seconds; the tanker has no +y drawing of its own, so the turn is a short cross-fade. */
   function tankerRun() {
-    const TRIP = 56, ARRIVE = 12, MOOR = 24, LEAVE = 38, TURN = 1.5, GONE = 52;
+    const TRIP = 28, ARRIVE = 6, MOOR = 12, LEAVE = 19, TURN = 1, GONE = 26;
+    ACTS.tanker = { every: TRIP, start: ARRIVE + 3, dur: GONE - ARRIVE - 6 };   // from the last of its approach to leaving the berth area
     const k = t => +(t / TRIP).toFixed(4), timing = `dur="${TRIP}s" repeatCount="indefinite"`;
     const ship = A.marine.tanker(0, 0, { wake: 6 });            // deck x 0..40, y 0..22, bow at +x
     const berth = [-136, 646];
-    mark('v', berth[0] + 20, berth[1] + 11, 'Oil tanker (moors here, 56 s round trip)');
+    mark('v', berth[0] + 20, berth[1] + 11, 'Oil tanker (moors here, 28 s round trip)');
     const turned = [berth[0] + 9, berth[1] - 9];   // same hull centre after the turn
     const fadeOut = `<animate attributeName="opacity" values="1;1;0;0" keyTimes="0;${k(LEAVE)};${k(LEAVE + TURN)};1" ${timing}/>`;
     const fadeIn = `<animate attributeName="opacity" values="0;0;1;1" keyTimes="0;${k(LEAVE)};${k(LEAVE + TURN)};1" ${timing}/>`;
@@ -1070,16 +1075,15 @@
       key.push([t, S[i], 'w' + nx]);
       t += Math.max(1.5, Math.hypot(S[nx][0] - S[i][0], S[nx][1] - S[i][1]) / SPEED);
     });
-    const DUR = Math.ceil(t), begin = -(idx * 11 + 3), pins = [], pose = {}, sat = [SITES.SAT[0] - CX, SITES.SAT[1] - CY + 13];
+    const DUR = Math.ceil(t), begin = -(idx * 11 + 3), fade = inner => `<g>${inner}<animate attributeName="opacity" values="1;1;0;0" keyTimes="0;${((DUR - 1.4) / DUR).toFixed(4)};${((DUR - .2) / DUR).toFixed(4)};1" dur="${DUR}s" begin="${begin}s" repeatCount="indefinite"/></g>`, pins = [], pose = {}, sat = [SITES.SAT[0] - CX, SITES.SAT[1] - CY + 13];
     tour.forEach((m, i) => {
       const ta = at0[i], isPole = m.kind === 'd', col = isPole ? '#ff8a1f' : '#2f8fe0', z = isPole ? 36 : 24;
-      // drawn 1.7x with a cyan ring underfoot so a surveyor reads at map scale
-      const big = inner => `<ellipse rx="6" ry="2.4" fill="#3aa8d8" opacity=".45"/><g transform="scale(1.7)">${inner}</g>`;
+      const big = inner => `<ellipse rx="3.6" ry="1.4" fill="#3aa8d8" opacity=".45"/>${inner}`;   // normal size, a small cyan ring underfoot
       const p = { ['w' + i]: big(W.walk()), ['s' + i]: big(EN.pilot('phone', i * .3)) };
       items.push([stand[i][0] + stand[i][1] + 2, W.actor(key, p, DUR, begin)]);
       const pin = `<path d="M0 0C-3.4-3.6-3.4-8 0-9.6 3.4-8 3.4-3.6 0 0Z" fill="${col}" stroke="#fff" stroke-width=".7"/>` +
         (isPole ? '<circle cy="-6" r="1.3" fill="#fff"/>' : '<rect x="-1.3" y="-7.3" width="2.6" height="2.6" fill="#fff"/>');
-      pins.push(W.during(T(m.x, m.y, z, pin), ta + .9, DUR - .01, DUR, begin) +
+      pins.push(W.during(fade(T(m.x, m.y, z, pin)), ta + .9, DUR - .05, DUR, begin) +
         W.during(T(m.x, m.y, z - 4, `<circle r="2" fill="none" stroke="${col}" stroke-width="1"><animate attributeName="r" values="2;11" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0" dur="1.2s" repeatCount="indefinite"/></circle>`), ta + .5, ta + 1.7, DUR, begin) +
         W.during(EN.link(P(stand[i][0], stand[i][1], 11), sat, '#3aa8d8', 1.1, 0, 2), ta + .7, ta + 2, DUR, begin));
     });
@@ -1182,7 +1186,7 @@
     s += tie([...side('left', 130, 32), 38], [...SOLAR_LINE[SOLAR_LINE.length - 1], A.energy.POLE_H - 2], [-11, 11], [-5, 5]);
     s += tie([...HY_PYLON, 38], [HY[0] + 38.5, HY[1] + 5.5, 12], [-11, 11], [-1.5, 1.5]);
     // the inspection drone: lifts off the pad, scans five pylons (their tops light up), returns to charge, flies away
-    s += EN.droneMission({ pad: DRONE_PAD, pylons: DRONE_PYLONS, turn: DRONE_TURN, h: 46, away: [DRONE_PAD[0] - 170, DRONE_PAD[1] + 150, 95] });
+    s += EN.droneMission({ pad: DRONE_PAD, pylons: DRONE_PYLONS, turn: DRONE_TURN, h: 46, away: [DRONE_PAD[0] - 170, DRONE_PAD[1] + 150, 95], act: ACTS.drone = {} });
     s += clouds();
     // GIS earth-observation satellite above the clouds, scanning the wind farm
     const [scx, scy] = SITES.SAT;
@@ -1214,5 +1218,5 @@
   // (the pipeline is allowed to pass behind a mountain, so placeMountains skips it)
   const PIPE_LINE = PIPE;
   const roadLines = () => [RING_PTS.concat([RING_PTS[0]])].concat(ROADS, CITY_ST.map(seg => seg.map(p => [CITY[0] + p[0], CITY[1] + p[1]])), [PIPE_LINE]);
-  A.map = { roadLines, render, G, toC, SITES, site };
+  A.map = { roadLines, render, G, toC, SITES, site, acts: ACTS };
 })();
