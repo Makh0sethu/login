@@ -96,13 +96,20 @@
     WIND:  [1137.7, 425, 'Wind farm'],
     SOLAR: [431.1, 395, 'Solar PV plant'],              // back corner of the array
     HY:    [418, 252, 'Kariba hydro station'],          // back corner of the powerhouse
-    SAT:   [905, 262, 'GIS satellite']                  // screen space: the satellite's body
+    SAT:   [905, 262, 'GIS satellite'],                 // screen space: the satellite's body
+    BOOST: [1030, 585, 'Data booster ground station']   // centre of its fenced pad
   };
   const site = k => G(SITES[k][0], SITES[k][1]);
   const loc = (o, x, y) => [o[0] + x, o[1] + y];
   const RING = 370;
   const HW = site('HW'), REF = site('REF'), CITY = site('CITY'), MSA = site('MSA');
   const SUB = site('SUB'), BEIRA = site('BEIRA'), FER = site('FER');
+  /* spatial data chain: field collectors uplink to the GIS satellite, which downlinks to the booster ground station,
+     which relays by microwave to the ZESA head office in the city (its roof dish is at HQ_DISH, city local units).
+     COLLECTORS are [canvas x, canvas y, 'rover' | 'logger'], kept clear of roads and trees. */
+  const BOOST = site('BOOST');
+  const COLLECTORS = [[1345, 395, 'rover'], [735, 250, 'logger'], [1070, 790, 'logger'], [488, 482, 'rover']].map(([cx, cy, k]) => [...G(cx, cy), k]);
+  const HQ_DISH = [46, 18, 40];
   const OCEAN = [[-60, 600], [40, 606], [110, 632], [168, 690], [205, 760], [228, 840], [240, 920], [246, 1060], [-60, 1060]];
   // Lake Kariba behind the dam (canvas px); its lower edge tucks under the wall
   const LAKE = [[500, 40], [610, 40], [640, 70], [672, 104], [650, 140], [614, 170], [560, 174], [510, 170], [460, 180], [420, 186], [396, 182], [390, 160], [420, 128], [460, 98], [486, 66]];
@@ -700,8 +707,11 @@
     mark('b', -42, 64, 'Petrotrade #2');
     put(22, `<g transform="translate(${f(P(-42, 64)[0])},${f(P(-42, 64)[1])}) scale(.62)">${petroStation(2)}</g>`);
     // front-right: ZESA depot + substation
-    mark('b', 39, 24, 'ZESA depot office'); mark('a', 78, 30, 'ZESA depot substation');
-    B.blockParts([[24, 14, 30, 20, 22, 'office']], { seed: 9 }).forEach(b => put(b.k, b.svg + label(39, 34, 15, 'ZESA', '#1f5f8f', 6, 800)));
+    mark('b', 39, 24, 'ZESA head office + depot'); mark('a', 78, 30, 'ZESA depot substation');
+    B.blockParts([[24, 14, 30, 20, 34, 'office']], { seed: 9 }).forEach(b => put(b.k, b.svg + label(39, 34, 15, 'ZESA HQ', '#1f5f8f', 6, 800)));
+    // the head office's roof dish, turned up-left to the booster ground station
+    mark('a', HQ_DISH[0], HQ_DISH[1], 'ZESA HQ data dish', HQ_DISH[2]);
+    put(89, `<g transform="translate(${f(P(HQ_DISH[0], HQ_DISH[1], 34)[0])},${f(P(HQ_DISH[0], HQ_DISH[1], 34)[1])})">${A.energy.dish(5, -60)}</g>`);
     put(100, smallSubstation(62, 18));
     [[34, 52], [34, 66], [34, 80]].forEach(([x, y], i) => { mark('c', x, y, 'ZETDC ' + (i === 1 ? 'truck' : 'pickup') + ' (parked)'); put(x + y, at(x, y, cars.car({ livery: i === 1 ? 'zetdc-truck' : 'zetdc', dir: 1 }))); });
     blk(4, [[60, 70, 22, 18, 20, 'apartment'], [64, 94, 18, 14, 14, 'retail']]);
@@ -977,7 +987,8 @@
     const rects = [[1035, 520, 1610, 900], [600, 95, 1050, 300], [320, 620, 640, 820]];
     // world keep-clear boxes and spots for the energy assets
     const wrects = [[SS[0] - 14, SS[1] - 14, SS[0] + SS_W + 14, SS[1] + SS_D + 14], [SOLAR[0] - 14, SOLAR[1] - 14, SOLAR[0] + 100, SOLAR[1] + 76]];
-    const spots = WIND.map(([x, y]) => [x, y, 16]).concat(SOLAR_LINE.map(p => [p[0], p[1], 10]), [[HY[0] + 18, HY[1] + 6, 34]]);
+    const spots = WIND.map(([x, y]) => [x, y, 16]).concat(SOLAR_LINE.map(p => [p[0], p[1], 10]), [[HY[0] + 18, HY[1] + 6, 34], [BOOST[0] + 2, BOOST[1] + 3, 36]],
+      COLLECTORS.map(([x, y]) => [x, y, 14]));
     const segsOf = l => l.slice(1).map((p, i) => [l[i], p]);
     const roadSegs = ROADS.concat(CITY_ST.map(seg => seg.map(p => [CITY[0] + p[0], CITY[1] + p[1]])), [PIPE]).flatMap(segsOf);
     const ringSegs = segsOf(RING_PTS.filter((p, i) => i % 2 === 0).concat([RING_PTS[0]]));
@@ -1065,6 +1076,9 @@
     region(SOLAR, () => { mark('a', 32, 22, 'Solar PV plant'); return swap('09-energy/solar-plant', 0, 0, () => EN.solarFarm()); }, 40);
     lv(wput, SOLAR_LINE, [[0, [SOLAR[0] + 75, SOLAR[1] + 18, 7]]]);
     hydro(items);
+    // spatial data collectors in the field, and the booster ground station
+    COLLECTORS.forEach(([x, y, k], i) => { mark('a', x, y, k === 'rover' ? 'Spatial data collector (GNSS survey rover)' : 'Spatial data collector (data logger)'); items.push([x + y, EN.collector(x, y, k, i * .4)]); });
+    region(BOOST, () => { mark('a', 0, 0, 'Data booster ground station'); return EN.booster(); }, 10);
     items.push([-2000, quay()]);
     items.push([-1999, tankerRun()]);
     mark('a', -290, 580, 'Offshore oil rig');
@@ -1114,6 +1128,11 @@
     // GIS earth-observation satellite above the clouds, scanning the wind farm
     const [scx, scy] = SITES.SAT;
     mark('a', ...site('SAT'), 'GIS satellite');
+    // spatial data chain: collectors -> satellite (uplink), satellite -> booster (downlink), booster -> ZESA HQ (microwave)
+    const satDish = [scx - CX, scy - CY + 13], at3 = (o, p) => P(o[0] + p[0], o[1] + p[1], p[2]);
+    COLLECTORS.forEach(([x, y, k], i) => { s += A.energy.link(P(x, y, A.energy.COLLECTOR_TOP[k]), satDish, '#3aa8d8', 2.2 + i * .25, -i * .7); });
+    s += A.energy.link(satDish, at3(BOOST, A.energy.BOOSTER.dish), '#f2a93b', 1.8, 0, 3);
+    s += A.energy.link(at3(BOOST, A.energy.BOOSTER.mw), at3(CITY, HQ_DISH), '#1f7fc0', 1.6, -.4, 3);
     s += swap('09-energy/gis-satellite', ...site('SAT'), () => `<g transform="translate(${scx - CX},${scy - CY})">${A.energy.satBeam(240, 140, 50)}${A.energy.satellite()}</g>`);
     // labels
     s += tag(300, 150, '') + tag(215, 482, '') + tag(1290, 432, '') +

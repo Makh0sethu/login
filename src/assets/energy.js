@@ -1,5 +1,6 @@
 /* Generation + distribution assets: wind turbine, solar array, hydro powerhouse, biogas plant, substation,
-   distribution poles with pole-mounted transformers, and the GIS satellite.
+   distribution poles with pole-mounted transformers, the GIS satellite, and the spatial data chain
+   (field collectors, the booster ground station, radio links).
    Namespace: Assets.energy   Defs prefix: en-
    All functions return SVG strings in the local iso frame (origin = ground anchor) unless noted. P is read lazily. */
 (function () {
@@ -207,5 +208,79 @@
     return s;
   }
 
-  A.energy = { windTurbine, solarFarm, hydroHouse, biogas, substation, pole, poleWires, drop, satellite, satBeam, POLE_H };
+  /* ---------- spatial data: field collectors, the booster ground station, the radio links ---------- */
+  // a parabolic dish in screen px around its mount point, its face turned by rot degrees (0 = facing straight up)
+  function dish(r, rot = 0) {
+    return `<path d="M0 0L${f(-r * .3)} ${f(r * .55)}M0 0L${f(r * .3)} ${f(r * .55)}" stroke="#7d8b99" stroke-width=".8"/>` +
+      `<g transform="rotate(${rot})"><path d="M${-r} 0A${r} ${f(r * .55)} 0 0 0 ${r} 0Z" fill="#c9d3dd" stroke="#9aa9b8" stroke-width=".5"/>` +
+      `<ellipse rx="${r}" ry="${f(r * .32)}" fill="#f4f7fa" stroke="#9aa9b8" stroke-width=".5"/>` +
+      `<path d="M0 0V${f(-r * .8)}" stroke="#7d8b99" stroke-width=".6"/><circle cy="${f(-r * .85)}" r=".9" fill="#56626f"/></g>`;
+  }
+  // an expanding radio ring at an antenna tip (screen px), looping
+  const pulse = (x, y, col, delay) => `<circle cx="${f(x)}" cy="${f(y)}" r="1" fill="none" stroke="${col}" stroke-width=".8">` +
+    `<animate attributeName="r" values="1;7" dur="1.6s" begin="${delay}s" repeatCount="indefinite"/>` +
+    `<animate attributeName="opacity" values=".9;0" dur="1.6s" begin="${delay}s" repeatCount="indefinite"/></circle>`;
+  // heights of each collector's antenna tip (local z), where its uplink starts
+  const COLLECTOR_TOP = { rover: 15, logger: 23 };
+  // spatial data collector at (x, y): 'rover' = a surveyor at a tripod GNSS receiver with a field tablet,
+  // 'logger' = an unattended data-logger mast (solar panel, cabinet, whip antenna)
+  function collector(x, y, kind = 'rover', delay = 0) {
+    let s = `<ellipse rx="8" ry="3" fill="#0b1e33" opacity=".15"/>`;
+    if (kind === 'rover') {
+      s += `<path d="M-4.5 1L0 -11M4 1L0 -11M-.5 2.5L0 -11" stroke="#d9a53c" stroke-width=".9"/>` +
+        `<rect x="-.6" y="-13" width="1.2" height="2.4" fill="#56626f"/><ellipse cy="-13.4" rx="3.2" ry="1.2" fill="#f4f7fa" stroke="#9aa9b8" stroke-width=".5"/>` +
+        `<path d="M0 -14.2V-15" stroke="#56626f" stroke-width=".6"/>`;
+      // the surveyor: hi-vis vest, white hard hat, tablet glowing
+      s += `<g transform="translate(7,1)"><path d="M-1 -4.6L-1.2 -.4M1 -4.6L1.2 -.4" stroke="#2b3866" stroke-width="1.5" stroke-linecap="round"/>` +
+        `<rect x="-2" y="-8.6" width="4" height="4.4" rx="1" fill="#f08c2a"/><path d="M-2 -6.6h4" stroke="#fff3c4" stroke-width=".55"/>` +
+        `<path d="M-1.8 -7.6L-3.6 -6.4" stroke="#2b3866" stroke-width="1.1" stroke-linecap="round"/>` +
+        `<rect x="-5.6" y="-7.8" width="2.6" height="1.9" rx=".3" fill="#23272c"/><rect x="-5.3" y="-7.5" width="2" height="1.3" fill="#7fe0ff" class="glow"/>` +
+        `<circle cy="-9.9" r="1.45" fill="#6f4428"/><path d="M-1.7 -10.3a1.7 1.6 0 0 1 3.4 0z" fill="#ffffff"/></g>`;
+    } else {
+      s += `<rect x="-.7" y="-20" width="1.4" height="20" fill="#8d9bab"/>` +
+        `<path d="M-6 -17L3 -21L3 -16L-6 -12Z" fill="url(#en-pv)" stroke="#c4d8ee" stroke-width=".5"/>` +
+        `<rect x="-3.4" y="-10" width="5.6" height="6.4" rx=".6" fill="#e9eef3" stroke="#9aa9b8" stroke-width=".5"/><path d="M2.2 -9.4V-4.2" stroke="#b2bfcc" stroke-width=".6"/>` +
+        `<circle cx="-1.6" cy="-8.4" r=".6" fill="#4f9a5d" class="glow" style="animation-delay:${delay}s"/>` +
+        `<path d="M.4 -20V-23" stroke="#56626f" stroke-width=".6"/>`;
+    }
+    s += pulse(0, -COLLECTOR_TOP[kind], '#3aa8d8', delay);
+    return T(x, y, 0, s);
+  }
+  // booster ground station (local frame): a fenced gravel pad with an equipment shelter, a satellite dish taking the
+  // downlink and a lattice mast whose microwave dish relays to the head office. BOOSTER gives the two link ends (local x, y, z).
+  const BOOSTER = { dish: [10, 10, 14], mw: [-6, -6, 52] };
+  function booster() {
+    const H = 60;
+    let s = `<ellipse cy="2" rx="30" ry="13" fill="#0b1e33" opacity=".12"/>` +
+      poly([P(-18, -16, .2), P(22, -16, .2), P(22, 22, .2), P(-18, 22, .2)], '#d3d8dd', 'stroke="#b9c0c8" stroke-width=".6"');
+    s += fence(-18, -16, 22, -16, 6) + fence(-18, -16, -18, 22, 6);
+    // lattice mast: tapered legs, cross bracing, red/white top bands, beacon
+    const leg = z => 4.4 - 3.2 * z / H;
+    let m = `<path d="M-4.4 0L-1.2 ${-H}M4.4 0L1.2 ${-H}" stroke="#8d9bab" stroke-width=".9"/>`;
+    for (let z = 0; z < H - 4; z += 6) m += `<path d="M${f(-leg(z))} ${-z}L${f(leg(z + 6))} ${-z - 6}M${f(leg(z))} ${-z}L${f(-leg(z + 6))} ${-z - 6}" stroke="#b2bfcc" stroke-width=".45"/>`;
+    m += `<path d="M-1.9 ${-H + 10}H1.9V${-H + 4}H-1.9Z" fill="#e04a3f"/><path d="M-1.6 ${-H + 4}H1.6V${-H}H-1.6Z" fill="#ffffff"/>` +
+      `<path d="M0 ${-H}V${-H - 6}" stroke="#56626f" stroke-width=".6"/><circle cy="${-H - 6.5}" r="1.2" fill="#e04a3f" class="glow"/>`;
+    // microwave drum pointing right-down towards the city, and a panel antenna
+    m += `<g transform="translate(2.4,${-H + 8})"><rect x="0" y="-2.6" width="2" height="5.2" fill="#c9d3dd"/><ellipse cx="2" rx="1.6" ry="3.2" fill="#f4f7fa" stroke="#9aa9b8" stroke-width=".5"/></g>` +
+      `<rect x="-4.4" y="${-H + 12}" width="1.6" height="5" rx=".4" fill="#e9eef3" stroke="#9aa9b8" stroke-width=".4"/>`;
+    s += T(-6, -6, 0, m);
+    // equipment shelter with a door and an aircon unit
+    s += box(-14, 6, 0, 12, 10, 8, C.white) + winL(-11, 16, 0, 3, 5.6, '#7d8b99') + winR(-2, 9, 3.5, 3, 2.4, '#b2bfcc');
+    // the satellite dish on its pedestal, tipped up-left at the satellite
+    const [dx, dy] = P(10, 10, 6);
+    s += cyl(10, 10, 0, 1.8, 6, C.grey) + `<g transform="translate(${f(dx)},${f(dy)})">${dish(8, -38)}</g>`;
+    s += fence(22, -16, 22, 22, 6) + fence(-18, 22, 22, 22, 6);
+    return s;
+  }
+  // a radio link between two screen points: a faint beam, a dashed core running a -> b and n data packets riding it
+  function link(a, b, col, dur = 2.4, delay = 0, n = 2) {
+    const d = `M${f(a[0])} ${f(a[1])}L${f(b[0])} ${f(b[1])}`;
+    let s = `<path d="${d}" stroke="${col}" stroke-width="4" opacity=".2" fill="none"/>` +
+      `<path d="${d}" stroke="${col}" stroke-width="1.2" stroke-dasharray="3 4" fill="none" opacity=".95"><animate attributeName="stroke-dashoffset" from="14" to="0" dur=".8s" repeatCount="indefinite"/></path>`;
+    for (let i = 0; i < n; i++) s += `<circle r="2.2" fill="#ffffff" stroke="${col}" stroke-width="1"><animateMotion dur="${dur}s" begin="${f(delay - i * dur / n)}s" repeatCount="indefinite" path="${d}"/></circle>`;
+    return `<g pointer-events="none">${s}</g>`;
+  }
+
+  A.energy = { windTurbine, solarFarm, hydroHouse, biogas, substation, pole, poleWires, drop, satellite, satBeam, POLE_H,
+    dish, collector, COLLECTOR_TOP, booster, BOOSTER, link };
 })();

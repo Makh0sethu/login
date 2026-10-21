@@ -31,7 +31,7 @@ archive/                   unused logos and old file versions, kept for referenc
 
 | File | What it does |
 |---|---|
-| `src/assets/energy.js` | Generation + distribution assets (`Assets.energy`): wind turbine, solar array, hydro powerhouse, biogas plant, substation, distribution pole (optionally with a pole-mounted transformer), pole conductors, service drops, GIS satellite + scan beam. |
+| `src/assets/energy.js` | Generation + distribution assets (`Assets.energy`): wind turbine, solar array, hydro powerhouse, biogas plant, substation, distribution pole (optionally with a pole-mounted transformer), pole conductors, service drops, GIS satellite + scan beam, spatial data collectors (`collector(x, y, 'rover' | 'logger')`), the booster ground station (`booster()`, link ends in `BOOSTER`), a parabolic `dish()`, and `link(a, b, colour)` radio beams with moving data packets. |
 | `src/assets/crew.js` | ZETDC line crew (`Assets.crew`): lineman poses (`walk`, `climb`, `cart` riding a conductor, `crouch`, `spot`), a cone, and `actor(track, poses, dur, begin)`, which moves one figure through keyed poses on a vehicle's lap. |
 | `src/assets/textures.js` | Paints the ground textures once at load on a `<canvas>` and registers them as `tx-*` patterns. See *Land textures* below. |
 | `src/assets/terrain.js` | Scene slabs (used by its preview page and the exports) and the `ter-*` patterns the map uses (gravel, coal). |
@@ -77,6 +77,7 @@ archive/                   unused logos and old file versions, kept for referenc
 | Hydro station | below the dam | `HY`, `hydro()`: intake on the lake shore, penstocks, powerhouse, tie to the nearest pylon |
 | Biogas plant | REF village, behind the school | in `ref()` |
 | GIS satellite | floating above the clouds over the inner field, beam on the wind farm | end of `render()` |
+| Spatial data chain | four field collectors (GNSS survey rovers + data-logger masts) uplink to the GIS satellite, which downlinks to the booster ground station (inside the ring, left of the city), which relays by microwave to the ZESA HQ roof dish in the city | `COLLECTORS`, anchor `BOOST`, `HQ_DISH` (city local); links drawn at the end of `render()` with `Assets.energy.link()` |
 
 The **ring road** is a rounded square at world `±RING` (370) around the card whose sides bend in and out. The bends are
 the `BEND` knots per side: `[position along the side, offset]`, where a positive offset is away from the card. `side(name, c, lat)`
