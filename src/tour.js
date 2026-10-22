@@ -6,7 +6,7 @@
    off, the tanker nearing the jetty), and every other CSS animation on the map is paused until the zoom out starts.
    Choosing the scene already shown plays its action again. The zoom keeps one screen point fixed (the view width
    shrinks geometrically and the centre moves in step), so the scene grows out of where it sits on the whole map.
-   Used by the sign-in page (index.html, with ?present) and the map demo (demo/index.html); each page says how to show
+   Used by the sign-in page (index.html) and the map demo (demo/index.html); each page says how to show
    a view, and controls() adds the presenter bar and keys.
    Needs src/map.js (scene points come from its SITES and the local offsets the scenes use there). */
 (function () {
@@ -20,6 +20,7 @@
       { zesa: true, act: 'crewREF', name: 'ZESA line crew at work — REF village', at: near('REF', -14, 4, 8), w: 150 },
       { zesa: true, act: 'crewCity', name: 'ZESA line crew at work — city back street', at: near('CITY', 142, -140, 8), w: 160 },
       { zesa: true, act: 'drone', name: 'ZESA pylon inspection drone — charging pad to the first pylon', at: [385, 432], w: 440 },
+      { act: 'ribbon', name: 'Wind farm commissioning — the ribbon cutting', at: near('WIND', -130, 66, 6), w: 190 },
       { name: 'Spatial data: surveyors tagging poles and meters — suburb', at: MAP.SITES.SUB, w: 320 },
       { name: 'Spatial data: surveyors tagging poles and buildings — city', at: near('CITY', 10, -140), w: 300 },
       { act: 'tanker', name: 'Oil tanker offloading at the Beira jetty', at: MAP.toC(-116, 657), w: 300 }
@@ -101,8 +102,8 @@
 
   /* The presenter bar in mount (previous, a list of the scenes, whole map, next) and keys: right / PageDown next,
      left / PageUp previous, Esc / Home whole map, 1-9 a scene (presentation clickers send PageUp / PageDown). Keys
-     typed into a form field are left alone. The bar fades after IDLE s without the mouse or a key, and comes back on
-     either. */
+     typed into a form field are left alone. The bar dims after IDLE s without the mouse or a key (the pages style
+     .idle), and comes back on either. */
   function controls(t, mount) {
     const IDLE = 3;
     mount.innerHTML = `<button type="button" data-k="prev" title="Previous scene (←)" aria-label="Previous scene">&lsaquo;</button>` +

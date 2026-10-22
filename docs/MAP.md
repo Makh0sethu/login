@@ -16,9 +16,9 @@ src/                       framework + the map
   iso.js                   isometric helpers: P(x,y,z), box, cyl, poly, T, label, lamp, person, fence, packet, C colours
   map.js                   the landscape: SITES, terrain, rivers, ocean, roads, regions, traffic, power, trees
   exports.js               Assets.ex: draws a file from art/svg on the map
-  tour.js                  Assets.tour: the presenter-driven scene tour on the sign-in page (index.html?present) and the
-                           demo. Nothing moves on its own: a bar (previous, scene list, whole map, next, fading when idle)
-                           and keys (right / PageDown next, left / PageUp previous, Esc whole map, 1-6 a scene; clickers
+  tour.js                  Assets.tour: the presenter-driven scene tour on the sign-in page and the
+                           demo. Nothing moves on its own: a bar (previous, scene list, whole map, next, dimming when idle)
+                           and keys (right / PageDown next, left / PageUp previous, Esc whole map, 1-7 a scene; clickers
                            send PageUp / PageDown) fly in over 4 s, out over 4 s. ZESA scenes are listed first. Zoom-ins
                            are cued: as the zoom starts, the scene's own animations (drawn inside <g data-act>, see
                            acting() and ACTS in map.js) restart so the camera lands as its action begins, and every other
@@ -41,7 +41,7 @@ archive/                   unused logos and old file versions, kept for referenc
 | File | What it does |
 |---|---|
 | `src/assets/energy.js` | Generation + distribution assets (`Assets.energy`): wind turbine, solar array, hydro powerhouse, biogas plant, substation, distribution pole (optionally with a pole-mounted transformer), pole conductors, service drops, GIS satellite + scan beam, spatial data collectors (`collector(x, y, 'rover' | 'logger')`), the booster ground station (`booster()`, link ends in `BOOSTER`), a parabolic `dish()`, and `link(a, b, colour)` radio beams with moving data packets. |
-| `src/assets/crew.js` | ZETDC line crew (`Assets.crew`): lineman poses (`walk`, `carry` with the ladder, `crouch`, `climb` the ladder, `reach` working on the crossarm, `hold` footing the ladder, `spot`), the `ladder` leant on a pole, a cone, and `actor(track, poses, dur, begin)`, which moves one figure through keyed poses on a vehicle's lap. |
+| `src/assets/crew.js` | ZETDC line crew (`Assets.crew`): lineman poses (`walk`, `carry` with the ladder, `crouch`, `climb` the ladder, `reach` working on the crossarm, `hold` footing the ladder, `spot`), the `ladder` leant on a pole, a cone, and `actor(track, poses, dur, begin)`, which moves one figure through keyed poses on a vehicle's lap. Also the ribbon-cutting figures: `official()` (black suit, scissors), `guest(colour)` (claps after the cut) and `ribbon(b)` (two posts, halves drop at the cut). |
 | `src/assets/textures.js` | Paints the ground textures once at load on a `<canvas>` and registers them as `tx-*` patterns. See *Land textures* below. |
 | `src/assets/terrain.js` | Scene slabs (used by its preview page and the exports) and the `ter-*` patterns the map uses (gravel, coal). |
 | `src/assets/roads.js` | Road + rail pieces from the old five-tile page; only `preview/rails.html` uses it now. |
@@ -89,6 +89,7 @@ archive/                   unused logos and old file versions, kept for referenc
 | GIS satellite | floating above the clouds beside the wind farm; its beam (`SAT_BEAM`, baked into the exported art/svg/09-energy/gis-satellite.svg, so re-run tools/export-energy.js after moving `SAT` or `WIND`) scans the wind farm | end of `render()` |
 | Spatial data chain | surveyors on foot (REF village, the suburb, the city back street) walk from pole to pole and house to house tagging each pole (orange pin) and each meter (blue pin) with a phone; every tag sends a burst up to the GIS satellite, which downlinks to the booster ground station (inside the ring, left of the city), which relays by microwave to the ZESA HQ roof dish in the city | `SURVEYS` + `surveyWalk()` (tours are picked from the registered poles and buildings near each `near`); `BOOST`, `HQ_DISH`; links drawn at the end of `render()` with `Assets.energy.link()` |
 | Pylon inspection drone | a ZESA ladder truck, two pilots and a charging pad on open ground south-east of Hwange. The drone lifts off, flies up the main line (`LINE_MAIN`) hovering over each pylon (the top glows mint only while it is over it, then a tick), carries on to the wind plant, returns straight to the pad, charges for 2 s, then flies off and fades out (one ~80 s loop) | `DRONE_PYLONS`, `DRONE_TURN`, `DRONE_PAD`, `DRONE_TRUCK`, `DRONE_PILOTS` next to `SS_IN`; `Assets.energy.droneMission()` / `pilot()` / `dronePad()`. Leg times come from distance (`SPEED` in `droneMission`) |
+| Wind farm ribbon cutting | open ground left of the wind farm's flags: seven cars parked side by side (two ZERA EVs, a black sedan, a ZESA pickup, a blue sedan, a red hatchback and a grey SUV), five guests, and an official in a black suit who snips the ribbon at 4 s into each 12 s loop; both halves drop to the ground, confetti goes up and the guests clap | `RIBBON_*` next to `FLAG_SPOTS` in `src/map.js` (tour act `ribbon`); `Assets.crew.official()` / `guest()` / `ribbon()` |
 | Power station flags | a pole with the Zimbabwe flag and a ZESA flag (rippling) at every power station: Hwange, Kariba hydro, the solar PV plant and the wind farm | `FLAG_SPOTS` next to `SS_IN` in `src/map.js`; `Assets.energy.flags()`. `Assets.energy.zesaCrest()` is the ZESA coat of arms redrawn as vectors (also on the drone charging pad) |
 
 The **ring road** is a rounded square at world `±RING` (370) around the card whose sides bend in and out. The bends are
