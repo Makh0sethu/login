@@ -10,14 +10,16 @@ artwork drawn from `art/svg/` (see *Importing artwork*).
 index.html                 page shell + sign-in form; loads the scripts and renders the map
 demo/index.html            map-only pan/zoom demo (no sign-in); built by tools/build-demo.js into dist-demo/,
                            live at ui.uhambo.co.zw/energy-map/ (one file, manual scp, not linked from the website).
-                           It runs the scene tour (src/tour.js); any touch stops it, and it resumes after 20 s idle
+                           It has the scene tour's presenter bar (src/tour.js); dragging or zooming takes over a flight
 src/                       framework + the map
   core.js                  window.Assets registry, shared <defs> (Assets.addDefs / mountDefs)
   iso.js                   isometric helpers: P(x,y,z), box, cyl, poly, T, label, lamp, person, fence, packet, C colours
   map.js                   the landscape: SITES, terrain, rivers, ocean, roads, regions, traffic, power, trees
   exports.js               Assets.ex: draws a file from art/svg on the map
-  tour.js                  Assets.tour: the scene tour on the sign-in page and the demo. Whole map 8 s, zoom into an
-                           active scene 4 s, hold 8 s, zoom out 4 s. ZESA scenes come first in each round. Zoom-ins
+  tour.js                  Assets.tour: the presenter-driven scene tour on the sign-in page (index.html?present) and the
+                           demo. Nothing moves on its own: a bar (previous, scene list, whole map, next, fading when idle)
+                           and keys (right / PageDown next, left / PageUp previous, Esc whole map, 1-6 a scene; clickers
+                           send PageUp / PageDown) fly in over 4 s, out over 4 s. ZESA scenes are listed first. Zoom-ins
                            are cued: as the zoom starts, the scene's own animations (drawn inside <g data-act>, see
                            acting() and ACTS in map.js) restart so the camera lands as its action begins, and every other
                            CSS animation pauses until the zoom out. On the sign-in page each scene is fitted into the open screen

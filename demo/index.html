@@ -26,7 +26,7 @@
     font:600 22px/1 inherit;color:#1d2b3a;cursor:pointer;display:grid;place-items:center}
   .zoom button:hover{background:#fff}
   .zoom button svg{width:20px;height:20px}
-  .hint{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:2;padding:8px 14px;border-radius:999px;
+  .hint{position:fixed;left:50%;bottom:70px;transform:translateX(-50%);z-index:2;padding:8px 14px;border-radius:999px;
     background:rgba(255,255,255,.7);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#1d2b3a;font-size:.8rem;
     box-shadow:0 6px 18px rgba(20,50,80,.18);transition:opacity .6s;pointer-events:none;white-space:nowrap}
   .hint.off{opacity:0}
@@ -35,7 +35,13 @@
     background:rgba(255,255,255,.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#1d2b3a;font-size:.85rem;font-weight:600;
     box-shadow:0 6px 18px rgba(20,50,80,.18);transition:opacity .8s;pointer-events:none;white-space:nowrap;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis}
   .caption.off{opacity:0}
-  .zoom button.on{background:#1f7fc0;color:#fff;border-color:#1f7fc0}
+  /* presenter bar for the scene tour (src/tour.js); fades out when the mouse and keys are idle */
+  .present{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:3;display:flex;gap:6px;align-items:center;padding:6px;border-radius:14px;
+    background:rgba(255,255,255,.82);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 6px 18px rgba(20,50,80,.22);transition:opacity .5s;max-width:calc(100vw - 96px)}
+  .present.idle:not(:hover):not(:focus-within){opacity:0}
+  .present button{flex:none;width:36px;height:36px;border:0;border-radius:10px;background:#fff;color:#1d2b3a;font:600 20px/1 inherit;cursor:pointer}
+  .present button:hover{background:#e8f2fa}
+  .present select{min-width:0;height:36px;width:320px;border:1px solid #cfdae5;border-radius:10px;padding:0 8px;font:inherit;font-size:.8rem;background:#fff;color:#1d2b3a}
 
   /* ---- animations used by the map ---- */
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -69,11 +75,11 @@
 <div class="zoom">
   <button type="button" id="zin" title="Zoom in" aria-label="Zoom in">+</button>
   <button type="button" id="zout" title="Zoom out" aria-label="Zoom out">&minus;</button>
-  <button type="button" id="ztour" title="Pause tour" aria-label="Pause tour"><svg viewBox="0 0 24 24" fill="currentColor"><path id="ztour-icon" d="M7 5h3v14H7zM14 5h3v14h-3z"/></svg></button>
   <button type="button" id="zfit" title="Reset view" aria-label="Reset view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
 </div>
 <div class="caption off" id="caption" role="status"></div>
-<div class="hint" id="hint">Drag to pan &middot; scroll or pinch to zoom</div>
+<div class="present" id="present"></div>
+<div class="hint" id="hint">Drag to pan &middot; scroll or pinch to zoom &middot; &larr; &rarr; for scenes</div>
 
 <script src="src/core.js"></script>
 <script src="src/iso.js"></script>
@@ -251,40 +257,20 @@ addEventListener('keydown', e => {
 });
 
 /* ---------- scene tour (src/tour.js) ----------
-   Any drag, wheel, key or button stops the tour; it picks up again RESUME s after the last touch, with the zoom out
-   from wherever the view was left, unless it was paused with the tour button. Animations keep running throughout. */
-const RESUME = 20;
-const caption = document.getElementById('caption'), tourBtn = document.getElementById('ztour'), tourIcon = document.getElementById('ztour-icon');
-const here = () => ({ w: W / s, cx: vx + W / 2 / s, cy: vy + H / 2 / s });
+   The presenter flies the map with the bar and keys (Assets.tour.controls). Dragging, the wheel, a pinch or the zoom
+   buttons take over from a flight that is under way; the next scene starts from wherever the view was left. */
+const caption = document.getElementById('caption');
 const tour = Assets.tour.run({
   svg,                                                                          // so each scene is cued as the zoom in starts
   home: () => ({ w: W / cover(), cx: MW / 2, cy: MH / 2 }),                    // the fit() view
   close: sc => ({ w: Math.max(sc.w, sc.w * .62 * W / H), cx: sc.at[0], cy: sc.at[1] }),
+  here: () => ({ w: W / s, cx: vx + W / 2 / s, cy: vy + H / 2 / s }),
   show: v => { s = W / v.w; vx = v.cx - v.w / 2; vy = v.cy - H / 2 / s; update(); },
   caption: sc => { if (sc) caption.textContent = sc.name; caption.classList.toggle('off', !sc); }
 });
-let running = false, resumeT = 0, paused = false;
-function startTour(from) { running = true; tour.start(from); }
-function stopTour() { running = false; tour.stop(); }
-function setPaused(p) {
-  paused = p; clearTimeout(resumeT);
-  tourBtn.classList.toggle('on', p);
-  tourBtn.title = p ? 'Play tour' : 'Pause tour'; tourBtn.setAttribute('aria-label', tourBtn.title);
-  tourIcon.setAttribute('d', p ? 'M8 5v14l11-7z' : 'M7 5h3v14H7zM14 5h3v14h-3z');
-  if (p) stopTour(); else startTour(s < cover() * 1.01 ? null : here());
-}
-// the person takes over: stop now, and come back once they have left the map alone for RESUME s
-function touched() {
-  if (running) stopTour();
-  clearTimeout(resumeT);
-  if (!paused) resumeT = setTimeout(() => startTour(here()), RESUME * 1000);
-}
-['pointerdown', 'pointerup', 'wheel', 'dblclick'].forEach(t => svg.addEventListener(t, touched, { passive: true }));
-addEventListener('keydown', touched);
-['zin', 'zout', 'zfit'].forEach(id => document.getElementById(id).addEventListener('click', touched));
-addEventListener('resize', () => tour.refresh());
-tourBtn.addEventListener('click', () => setPaused(!paused));
-if (matchMedia('(prefers-reduced-motion: reduce)').matches) setPaused(true); else startTour();
+['pointerdown', 'wheel', 'dblclick'].forEach(t => svg.addEventListener(t, () => tour.interrupt(), { passive: true }));
+['zin', 'zout', 'zfit'].forEach(id => document.getElementById(id).addEventListener('click', () => tour.interrupt()));
+Assets.tour.controls(tour, document.getElementById('present'));
 })();
 </script>
 </body>

@@ -39,6 +39,14 @@
     background:rgba(255,255,255,.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:var(--ink);font-size:.8rem;font-weight:600;
     box-shadow:0 6px 18px rgba(20,50,80,.18);transition:opacity .8s;pointer-events:none;white-space:nowrap;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis}
   .caption.off{opacity:0}
+  /* presenter bar for the scene tour (src/tour.js); fades out when the mouse and keys are idle */
+  .present{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:5;display:flex;gap:6px;align-items:center;padding:6px;border-radius:14px;
+    background:rgba(255,255,255,.82);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 6px 18px rgba(20,50,80,.22);transition:opacity .5s;max-width:calc(100vw - 32px)}
+  .present[hidden]{display:none}
+  .present.idle:not(:hover):not(:focus-within){opacity:0}
+  .present button{flex:none;width:36px;height:36px;border:0;border-radius:10px;background:#fff;color:var(--ink);font:600 20px/1 inherit;cursor:pointer}
+  .present button:hover{background:#e8f2fa}
+  .present select{min-width:0;height:36px;width:320px;border:1px solid #cfdae5;border-radius:10px;padding:0 8px;font:inherit;font-size:.8rem;background:#fff;color:var(--ink)}
 
   /* login */
   form{pointer-events:auto;width:min(100%,380px);background:rgba(255,255,255,.55);backdrop-filter:blur(10px) saturate(1.2);-webkit-backdrop-filter:blur(10px) saturate(1.2);
@@ -137,6 +145,8 @@
   </footer>
 </div>
 
+<div class="present" id="present" hidden></div>
+
 <script src="src/core.js"></script>
 <script src="src/iso.js"></script>
 <script src="src/assets/terrain.js"></script>
@@ -164,9 +174,11 @@ document.getElementById('map').innerHTML = Assets.map.render();
    scene's core (CORE of its width) is fitted into the open part of the screen that shows it biggest: left or right of the form, or above or
    below it, always between the header and the footer (all measured, so it follows the layout at any screen size).
    A scene near the map's edge can't be centred there, so the zoom backs off until the scene sits inside that part.
-   The caption goes under the scene. Fits are worked out once per scene and again after a resize. */
+   The caption goes under the scene. Fits are worked out once per scene and again after a resize.
+   Only with ?present in the address (index.html?present): the presenter flies it with the bar and keys (see
+   Assets.tour.controls); without it the page is the plain sign-in. */
 (function () {
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (!new URLSearchParams(location.search).has('present')) return;
   const svg = document.getElementById('map'), caption = document.getElementById('caption');
   const form = document.getElementById('login'), header = document.querySelector('header'), footer = document.querySelector('footer');
   const MW = 1600, MH = 1000, TALL = .62, CORE = .5, PAD = 12;   // CORE: the part of a scene's width that has to show
@@ -216,7 +228,9 @@ document.getElementById('map').innerHTML = Assets.map.render();
     }
   });
   addEventListener('resize', () => { fits = new Map(); tour.refresh(); });
-  tour.start();
+  const bar = document.getElementById('present');
+  Assets.tour.controls(tour, bar);
+  bar.hidden = false;
 })();
 
 /* ---------- form behaviour (front-end demo only) ---------- */
