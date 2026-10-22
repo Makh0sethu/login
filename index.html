@@ -85,6 +85,9 @@
   .pulse{animation:pulse 2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
   @keyframes drift{0%{transform:translate(-1000px,-120px);opacity:0}6%,94%{opacity:1}100%{transform:translate(1000px,120px);opacity:0}}
   .drift{animation:drift 110s linear infinite}
+  /* while the scene tour is zoomed into a scene, only that scene's CSS animations run (src/tour.js) */
+  #map.tour-focus *{animation-play-state:paused}
+  #map.tour-focus .tour-on,#map.tour-focus .tour-on *{animation-play-state:running}
   @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 
   @media (max-width:760px){
@@ -197,7 +200,7 @@ document.getElementById('map').innerHTML = Assets.map.render();
     return fits.get(sc) || home();                                             // no room anywhere: stay zoomed out
   }
   const tour = Assets.tour.run({
-    clock: () => svg.getCurrentTime(),
+    svg,
     home,
     close,
     show: v => { const h = v.w * innerHeight / innerWidth; svg.setAttribute('viewBox', [v.cx - v.w / 2, v.cy - h / 2, v.w, h].map(n => n.toFixed(2)).join(' ')); },

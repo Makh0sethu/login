@@ -67,9 +67,13 @@
      w wind turbines, p pylons, d distribution poles, a other assets. Positions are world units; mark() adds ORG,
      the anchor of the site being drawn (set by region() / pieces() in render()). */
   let DBG = null, ORG = [0, 0];
-  /* when the animated scenes are busy, for the scene tour (src/tour.js): name -> { every, start, dur } in seconds of the
-     map's SMIL clock: the action runs from start + k * every for dur seconds (start may be negative) */
+  /* the animated scenes of the scene tour (src/tour.js): name -> { at }, the time in the scene's own loop (s) the camera
+     should land on. Everything a scene draws is wrapped in <g data-act="name"> (see acting()), so the tour can restart
+     just those animations at the right point as it zooms in. */
   const ACTS = {};
+  let ACT = null;                                                       // the scene being drawn, while acting()
+  const tagged = s => ACT ? `<g data-act="${ACT}">${s}</g>` : s;
+  function acting(name, at, draw) { ACTS[name] = { at }; ACT = name; draw(); ACT = null; }
   const nextCode = kind => kind + (DBG.count[kind] = (DBG.count[kind] || 0) + 1);
   function mark(kind, x, y, name, z = 0) { if (DBG) DBG.marks.push({ code: nextCode(kind), kind, x: ORG[0] + x, y: ORG[1] + y, z, name }); }
   const LIVERY = { zetdc: 'ZETDC pickup', 'zetdc-truck': 'ZETDC truck', moepd: 'MoEPD SUV', zera: 'ZERA EV', petrotrade: 'Petrotrade tanker', noic: 'NOIC tanker' };
@@ -368,7 +372,7 @@
         }
         if (!loop && (tm(t0) < .07 || tm(t1) > .93)) g = fade(g, dur, begin);
         const m = atT((t0 + t1) / 2);
-        items.push([m[0] + m[1], g]);
+        items.push([m[0] + m[1], tagged(g)]);
       }
     });
   }
@@ -622,11 +626,14 @@
     // the huts at (-8, 2), where its line crew gets out for a repair (the loop keeps to open ground: right of the maize,
     // left of the huts, clear of the crop fields at x -82..-30 / -150..-112)
     const route = [[-20, -50], [100, -50], [152, -50], [152, 96], [40, 96], [-20, 96], [-20, 8], [-20, -50]], lap = 50, stops = { 1: 4, 4: 4, 6: 20 };
-    go('car', { livery: 'zetdc-truck', cargo: 'ladder' }, route, lap, -3, stops);
     // parked at (-20, 8) facing -y with the pole on its near side: both get out of the near side; the truck's piece is
-    // drawn at depth 3, so the crew goes just in front of it
-    lineCrew(put, schedule(route, lap, stops).arrive[6], lap, -3, {
-      pole: [-8, 2], foot: [-3.5, 2.5], hold: [-.5, 1], doorA: [-13.5, 1], doorB: [-13.5, 12], cone: [-17, -10], d: 3.5, act: 'crewREF' });
+    // drawn at depth 3, so the crew goes just in front of it. The tour lands 1 s before the truck stops there.
+    const parkREF = schedule(route, lap, stops).arrive[6];
+    acting('crewREF', parkREF - 1, () => {
+      go('car', { livery: 'zetdc-truck', cargo: 'ladder' }, route, lap, -3, stops);
+      lineCrew(put, parkREF, lap, -3, {
+        pole: [-8, 2], foot: [-3.5, 2.5], hold: [-.5, 1], doorA: [-13.5, 1], doorB: [-13.5, 12], cone: [-17, -10], d: 3.5 });
+    });
   }
   /* a parked line truck's two linemen, from t0 s into its lap for the 20 s it stands by a pole (all local [x, y]).
      B takes the extension ladder from the truck at doorB, carries it to the pole, leans it from `foot` up to the crossarm
@@ -635,7 +642,6 @@
      d is the crew's depth, picked against the truck's own (in front of it when the pole is on its near side). */
   function lineCrew(put, t0, dur, begin, o) {
     const W = A.crew, top = [o.pole[0] + .6, o.pole[1] + .6, 20];
-    if (o.act) ACTS[o.act] = { every: dur, start: t0 + begin, dur: 18.6 };   // from A leaving the truck to both back at it
     // a point u of the way up the ladder
     const rung = u => P(o.foot[0] + (top[0] - o.foot[0]) * u, o.foot[1] + (top[1] - o.foot[1]) * u, top[2] * u);
     const A1 = [], B1 = [], key = (k, s, p, pose) => k.push([t0 + s, p, pose]);
@@ -742,9 +748,12 @@
     // past the city feeder's transformer pole at (122, -145). The pole is on the truck's far side, so the crew gets out of
     // the far doors and is drawn behind the truck (one piece, depth 16.5) but in front of the pole.
     const crewRoute = [[128, -134.5], [162, -134.5], [174, -134.5]], crewLap = 26, crewStops = { 1: 20 };
-    go('car', { livery: 'zetdc-truck', cargo: 'ladder' }, crewRoute, crewLap, -5, crewStops);
-    lineCrew(put, schedule(crewRoute, crewLap, crewStops).arrive[1], crewLap, -5, {
-      pole: [122, -145], foot: [125.5, -141.5], hold: [128, -139.5], doorA: [169, -141], doorB: [153, -141], cone: [138, -136], d: -15, act: 'crewCity' });
+    const parkCity = schedule(crewRoute, crewLap, crewStops).arrive[1];   // the tour lands 1 s before the truck stops
+    acting('crewCity', parkCity - 1, () => {
+      go('car', { livery: 'zetdc-truck', cargo: 'ladder' }, crewRoute, crewLap, -5, crewStops);
+      lineCrew(put, parkCity, crewLap, -5, {
+        pole: [122, -145], foot: [125.5, -141.5], hold: [128, -139.5], doorA: [169, -141], doorB: [153, -141], cone: [138, -136], d: -15 });
+    });
   }
   // the garden blocks inside the ring (world units, drawn as pieces like the city): four houses and a tree
   // per block, and a pole run along the block's open front edge (in front of the houses, so the poles show) from the south
@@ -863,7 +872,7 @@
      visit. Times in seconds; the tanker has no +y drawing of its own, so the turn is a short cross-fade. */
   function tankerRun() {
     const TRIP = 28, ARRIVE = 6, MOOR = 12, LEAVE = 19, TURN = 1, GONE = 26;
-    ACTS.tanker = { every: TRIP, start: ARRIVE + 3, dur: GONE - ARRIVE - 6 };   // from the last of its approach to leaving the berth area
+    ACTS.tanker = { at: ARRIVE + 3 };   // the tour lands as it nears the jetty, 3 s before it moors
     const k = t => +(t / TRIP).toFixed(4), timing = `dur="${TRIP}s" repeatCount="indefinite"`;
     const ship = A.marine.tanker(0, 0, { wake: 6 });            // deck x 0..40, y 0..22, bow at +x
     const berth = [-136, 646];
@@ -1102,7 +1111,7 @@
     // a region drawn as separate depth-sorted pieces: fn(put(localDepth, svg), go(kind, spec, localRoute, dur, begin))
     const pieces = (o, fn) => {
       ORG = o;
-      fn((d, inner) => items.push([o[0] + o[1] + d, `<g transform="translate(${f(P(o[0], o[1])[0])},${f(P(o[0], o[1])[1])})">${inner}</g>`]),
+      fn((d, inner) => items.push([o[0] + o[1] + d, tagged(`<g transform="translate(${f(P(o[0], o[1])[0])},${f(P(o[0], o[1])[1])})">${inner}</g>`)]),
         (kind, spec, route, dur, b, stops) => drive(items, kind, spec, route.map(p => [o[0] + p[0], o[1] + p[1]]), dur, b, stops));
       ORG = [0, 0];
     };
@@ -1139,7 +1148,7 @@
     const SURVEY_SVG = SURVEYS.map((o, i) => surveyWalk(items, o, i)).join('');
     region(BOOST, () => { mark('a', 0, 0, 'Data booster ground station'); return EN.booster(); }, 10);
     items.push([-2000, quay()]);
-    items.push([-1999, tankerRun()]);
+    items.push([-1999, `<g data-act="tanker">${tankerRun()}</g>`]);
     mark('a', -290, 580, 'Offshore oil rig');
     items.push([-1998, A.marine.rig(-290, 580, { scale: 1 })]);
     boats(items);
@@ -1186,7 +1195,9 @@
     s += tie([...side('left', 130, 32), 38], [...SOLAR_LINE[SOLAR_LINE.length - 1], A.energy.POLE_H - 2], [-11, 11], [-5, 5]);
     s += tie([...HY_PYLON, 38], [HY[0] + 38.5, HY[1] + 5.5, 12], [-11, 11], [-1.5, 1.5]);
     // the inspection drone: lifts off the pad, scans five pylons (their tops light up), returns to charge, flies away
-    s += EN.droneMission({ pad: DRONE_PAD, pylons: DRONE_PYLONS, turn: DRONE_TURN, h: 46, away: [DRONE_PAD[0] - 170, DRONE_PAD[1] + 150, 95], act: ACTS.drone = {} });
+    // (the tour lands 1 s into its loop: it sits on the pad until 2 s, then lifts off for the first pylon)
+    ACTS.drone = { at: 1 };
+    s += `<g data-act="drone">${EN.droneMission({ pad: DRONE_PAD, pylons: DRONE_PYLONS, turn: DRONE_TURN, h: 46, away: [DRONE_PAD[0] - 170, DRONE_PAD[1] + 150, 95] })}</g>`;
     s += clouds();
     // GIS earth-observation satellite above the clouds, scanning the wind farm
     const [scx, scy] = SITES.SAT;

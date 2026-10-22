@@ -57,6 +57,9 @@
   .pulse{animation:pulse 2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
   @keyframes drift{0%{transform:translate(-1000px,-120px);opacity:0}6%,94%{opacity:1}100%{transform:translate(1000px,120px);opacity:0}}
   .drift{animation:drift 110s linear infinite}
+  /* while the scene tour is zoomed into a scene, only that scene's CSS animations run (src/tour.js) */
+  #map.tour-focus *{animation-play-state:paused}
+  #map.tour-focus .tour-on,#map.tour-focus .tour-on *{animation-play-state:running}
   @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
 </head>
@@ -254,7 +257,7 @@ const RESUME = 20;
 const caption = document.getElementById('caption'), tourBtn = document.getElementById('ztour'), tourIcon = document.getElementById('ztour-icon');
 const here = () => ({ w: W / s, cx: vx + W / 2 / s, cy: vy + H / 2 / s });
 const tour = Assets.tour.run({
-  clock: () => svg.getCurrentTime(),                                            // the map's SMIL time, so zoom-ins land on the action
+  svg,                                                                          // so each scene is cued as the zoom in starts
   home: () => ({ w: W / cover(), cx: MW / 2, cy: MH / 2 }),                    // the fit() view
   close: sc => ({ w: Math.max(sc.w, sc.w * .62 * W / H), cx: sc.at[0], cy: sc.at[1] }),
   show: v => { s = W / v.w; vx = v.cx - v.w / 2; vy = v.cy - H / 2 / s; update(); },

@@ -1,18 +1,16 @@
 /* Scene tour (Assets.tour): the map flies between the places where something is happening.
-   One lap: whole map for at least OUT s, zoom into a scene for IN s, stay there for HOLD s, zoom back out for BACK s.
-   Each round shows every ZESA scene first, then the others; a scene with rounds: n is in one round in n.
-   Scenes with an act (a name in Assets.map.acts) are timed so the zoom in ends while their action is running, with
-   at least HOLD s of it left: the whole-map wait stretches past OUT when needed, and of the scenes due, the one whose
-   action comes soonest goes next. A scene that would keep the map zoomed out more than SLOW s past OUT gives way to
-   one that is ready (taking the next round's scenes if none left in this one is) and keeps its place for a later lap.
-   Scenes without an act are busy all the time.
+   One lap: whole map for OUT s, zoom into a scene for IN s, stay there for HOLD s, zoom back out for BACK s.
+   Each round shows every ZESA scene first, then the others, in random order; a scene with rounds: n is in one round in n.
+   As the zoom in starts, a scene with an act (a name in Assets.map.acts, its parts drawn inside <g data-act="name">)
+   has its own animations restarted so the camera lands at its act's `at` (the truck pulling up, the drone about to lift
+   off, the tanker nearing the jetty), and every other CSS animation on the map is paused until the zoom out starts.
    The zoom keeps one screen point fixed (the view width shrinks geometrically and the centre moves in step), so the
    scene grows out of where it sits on the whole map.
    Used by the sign-in page (index.html) and the map demo (demo/index.html); each page says how to show a view.
    Needs src/map.js (scene points come from its SITES and the local offsets the scenes use there). */
 (function () {
   const A = window.Assets;
-  const OUT = 8, IN = 4, HOLD = 8, BACK = 4, SLOW = 12;
+  const OUT = 8, IN = 4, HOLD = 8, BACK = 4;
 
   // name, canvas point, width of map to show around it; zesa = shown first in every round
   function scenes() {
@@ -35,63 +33,70 @@
   }
   const shuffle = list => list.sort(() => Math.random() - .5);
 
+  /* Focus on scene sc in svg: restart its animations IN s before its act's `at` (each one at that point of its own loop)
+     and pause every other CSS animation (the page styles #map.tour-focus and .tour-on). unfocus(svg) undoes it. */
+  function focus(svg, sc) {
+    svg.classList.add('tour-focus');
+    if (!sc.act) return;
+    const parts = svg.querySelectorAll(`[data-act="${sc.act}"]`), act = A.map.acts[sc.act];
+    parts.forEach(g => {
+      g.classList.add('tour-on');
+      if (!act) return;
+      g.querySelectorAll('animate,animateTransform,animateMotion,set').forEach(a => {
+        let d; try { d = a.getSimpleDuration(); } catch (_) { return; }      // no finite loop: leave it be
+        if (d > 0) a.beginElementAt(-(((act.at - IN) % d) + d) % d);
+      });
+    });
+  }
+  function unfocus(svg) {
+    svg.classList.remove('tour-focus');
+    svg.querySelectorAll('.tour-on').forEach(g => g.classList.remove('tour-on'));
+  }
+
   /* o.home() the zoomed-out view, o.close(scene) the zoomed-in view, o.show(view) draws a view,
-     o.caption(scene | null) shows or hides the scene's name, o.clock() the map's SMIL time in seconds
-     (svg.getCurrentTime(); without it nothing is timed). Returns { start(from), stop(), refresh() }:
-     start() begins a lap zoomed out; start(view) begins with the zoom out from that view (a resumed tour);
-     refresh() draws the current view again (after a resize). */
+     o.caption(scene | null) shows or hides the scene's name, o.svg the map (to cue scenes; optional).
+     Returns { start(from), stop(), refresh() }: start() begins a lap zoomed out; start(view) begins with the zoom out
+     from that view (a resumed tour); refresh() draws the current view again (after a resize). */
   function run(o) {
     const SCENES = scenes();
-    let bag = [], round = 0, last = null, lap = null, raf = 0;   // bag: [{ sc, rank }], rank = 2 x round (+1 if not ZESA)
-    // seconds from now until the zoom in may start, so it ends while sc's action has HOLD s left (at least OUT)
-    function wait(sc) {
-      const act = sc.act && o.clock && A.map.acts[sc.act];
-      if (!act || !act.every) return OUT;
-      const now = o.clock(), early = now + OUT + IN;                  // the earliest the zoom in can end
-      const s0 = act.start + Math.floor((early - act.start) / act.every) * act.every;
-      const at = early <= s0 + Math.max(0, act.dur - HOLD) ? early : s0 + act.every;
-      return at - IN - now;
-    }
-    // add the next round: its ZESA scenes, then the rest (a scene still waiting in the bag keeps its earlier place)
-    function refill() {
-      const due = SCENES.filter(sc => (!sc.rounds || round % sc.rounds === 0) && !bag.some(b => b.sc === sc));
-      bag.push(...shuffle(due.filter(sc => sc.zesa)).map(sc => ({ sc, rank: 2 * round })),
-        ...shuffle(due.filter(sc => !sc.zesa)).map(sc => ({ sc, rank: 2 * round + 1 })));
-      round++;
-    }
-    // the earliest-ranked scene that is ready soon enough, soonest first (never the last one twice running)
+    let bag = [], round = 0, last = null, lap = null, raf = 0;
+    // a scene is cued by restarting its animations in the past, which the browser only allows after the clock's 0, so
+    // the map's clock starts an hour on (everything moves together, so vehicles keep their timing with each other)
+    if (o.svg && o.svg.getCurrentTime() < 3600) o.svg.setCurrentTime(o.svg.getCurrentTime() + 3600);
     function pick() {
-      const options = () => bag.filter(b => b.sc !== last || bag.length === 1).map(b => ({ ...b, wait: wait(b.sc) }));
-      if (!bag.length) refill();
-      let opts = options();
-      if (!opts.some(b => b.wait <= OUT + SLOW)) { refill(); opts = options(); }
-      const ready = opts.filter(b => b.wait <= OUT + SLOW);
-      const best = (ready.length ? ready : opts).sort((p, q) => p.rank - q.rank || p.wait - q.wait)[0];
-      bag.splice(bag.findIndex(b => b.sc === best.sc), 1);
-      last = best.sc;
-      return { scene: best.sc, out: best.wait };
+      if (!bag.length) {
+        const due = SCENES.filter(sc => !sc.rounds || round % sc.rounds === 0);
+        round++;
+        bag = shuffle(due.filter(sc => sc.zesa)).concat(shuffle(due.filter(sc => !sc.zesa)));
+        if (bag[0] === last && bag.length > 1) bag.push(bag.shift());
+      }
+      return last = bag.shift();
     }
     function tick(now) {
       raf = requestAnimationFrame(tick);
       let t = (now - lap.t0) / 1000;
-      if (t >= lap.out + IN + HOLD + BACK) { lap = { t0: now, ...pick(), phase: -1 }; t = 0; }
-      const there = lap.from || o.close(lap.scene), a = lap.out;
-      const phase = t < a ? 0 : t < a + IN ? 1 : t < a + IN + HOLD ? 2 : 3;
-      if (phase === 1) o.show(glide(o.home(), there, (t - a) / IN));
-      else if (phase === 3) o.show(glide(there, o.home(), (t - a - IN - HOLD) / BACK));
+      if (t >= OUT + IN + HOLD + BACK) { lap = { t0: now, scene: pick(), phase: -1 }; t = 0; }
+      const there = lap.from || o.close(lap.scene);
+      const phase = t < OUT ? 0 : t < OUT + IN ? 1 : t < OUT + IN + HOLD ? 2 : 3;
+      if (phase === 1) o.show(glide(o.home(), there, (t - OUT) / IN));
+      else if (phase === 3) o.show(glide(there, o.home(), (t - OUT - IN - HOLD) / BACK));
       else if (phase !== lap.phase) o.show(phase ? there : o.home());      // a hold: draw the view once, then leave it
-      if (phase !== lap.phase) o.caption(phase === 1 || phase === 2 ? lap.scene : null);
+      if (phase !== lap.phase) {
+        if (o.svg && phase === 1 && lap.scene && !lap.cued) { lap.cued = true; focus(o.svg, lap.scene); }
+        if (o.svg && phase === 3) unfocus(o.svg);
+        o.caption(phase === 1 || phase === 2 ? lap.scene : null);
+      }
       lap.phase = phase;
     }
-    function stop() { cancelAnimationFrame(raf); raf = 0; lap = null; o.caption(null); }
+    function stop() { cancelAnimationFrame(raf); raf = 0; lap = null; o.caption(null); if (o.svg) unfocus(o.svg); }
     function start(from) {
       stop();
       const now = performance.now();
-      lap = from ? { t0: now - (OUT + IN + HOLD) * 1000, out: OUT, scene: null, from, phase: -1 } : { t0: now, ...pick(), phase: -1 };
+      lap = from ? { t0: now - (OUT + IN + HOLD) * 1000, scene: null, from, phase: -1 } : { t0: now, scene: pick(), phase: -1 };
       raf = requestAnimationFrame(tick);
     }
     return { start, stop, refresh() { if (lap) lap.phase = -1; } };
   }
 
-  A.tour = { run, scenes, glide, OUT, IN, HOLD, BACK };
+  A.tour = { run, scenes, glide, focus, unfocus, OUT, IN, HOLD, BACK };
 })();

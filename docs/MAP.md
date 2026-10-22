@@ -18,8 +18,9 @@ src/                       framework + the map
   exports.js               Assets.ex: draws a file from art/svg on the map
   tour.js                  Assets.tour: the scene tour on the sign-in page and the demo. Whole map 8 s, zoom into an
                            active scene 4 s, hold 8 s, zoom out 4 s. ZESA scenes come first in each round. Zoom-ins
-                           are timed so they land while the scene's action runs (Assets.map.acts, from map.js), so the
-                           zoomed-out wait can stretch. On the sign-in page each scene is fitted into the open screen
+                           are cued: as the zoom starts, the scene's own animations (drawn inside <g data-act>, see
+                           acting() and ACTS in map.js) restart so the camera lands as its action begins, and every other
+                           CSS animation pauses until the zoom out. On the sign-in page each scene is fitted into the open screen
                            space around the form, header and footer (phones have none, so they stay zoomed out)
   debug.js                 the debug overlay (bug button, bottom right)
   assets/                  one file per asset family, each returning SVG strings
