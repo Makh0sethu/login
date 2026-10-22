@@ -38,7 +38,7 @@
   /* presenter bar for the scene tour (src/tour.js); fades out when the mouse and keys are idle */
   .present{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:3;display:flex;gap:6px;align-items:center;padding:6px;border-radius:14px;
     background:rgba(255,255,255,.82);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 6px 18px rgba(20,50,80,.22);transition:opacity .5s;max-width:calc(100vw - 96px)}
-  .present.idle:not(:hover):not(:focus-within){opacity:0}
+  .present.idle:not(:hover):not(:focus-within){opacity:.3}
   .present button{flex:none;width:36px;height:36px;border:0;border-radius:10px;background:#fff;color:#1d2b3a;font:600 20px/1 inherit;cursor:pointer}
   .present button:hover{background:#e8f2fa}
   .present select{min-width:0;height:36px;width:320px;border:1px solid #cfdae5;border-radius:10px;padding:0 8px;font:inherit;font-size:.8rem;background:#fff;color:#1d2b3a}
