@@ -1018,7 +1018,7 @@
     const wrects = [[SS[0] - 14, SS[1] - 14, SS[0] + SS_W + 14, SS[1] + SS_D + 14], [SOLAR[0] - 14, SOLAR[1] - 14, SOLAR[0] + 100, SOLAR[1] + 76]]
       .concat(HOMES.map(([x0, y0, x1, y1]) => [x0 - 8, y0 - 8, x1 + 8, y1 + 8]));
     const spots = WIND.map(([x, y]) => [x, y, 16]).concat(SOLAR_LINE.map(p => [p[0], p[1], 10]), [[HY[0] + 18, HY[1] + 6, 34], [BOOST[0] + 2, BOOST[1] + 3, 36]],
-      FEEDERS.flat().map(([x, y]) => [x, y, 10]), [[DRONE_PAD[0] - 20, DRONE_PAD[1] + 10, 58]].concat(FLAG_SPOTS.map(([x, y]) => [x, y, 14]), [[...loc(WIND_O, -136, 66), 52]]));
+      FEEDERS.flat().map(([x, y]) => [x, y, 10]), [[DRONE_PAD[0] - 20, DRONE_PAD[1] + 10, 58]].concat(FLAG_SPOTS.map(([x, y]) => [x, y, 16])));
     const segsOf = l => l.slice(1).map((p, i) => [l[i], p]);
     const roadSegs = ROADS.concat(CITY_ST.map(seg => seg.map(p => [CITY[0] + p[0], CITY[1] + p[1]])), [PIPE]).flatMap(segsOf);
     const ringSegs = segsOf(RING_PTS.filter((p, i) => i % 2 === 0).concat([RING_PTS[0]]));

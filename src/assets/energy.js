@@ -328,20 +328,21 @@
   }
   // a pole with the Zimbabwe flag and a ZESA flag, streaming to the right and rippling (screen px around the foot of the pole)
   function flags(delay = 0) {
-    const H = 30, W = 11, Hh = 7, wave = (d, amp) => `<animateTransform attributeName="transform" type="skewY" values="0;${-amp};0;${amp};0" dur="2.6s" begin="${d}s" repeatCount="indefinite"/>`;
+    const H = 34, W = 14, Hh = 9, GAP = W + 1.5, wave = (d, amp) => `<animateTransform attributeName="transform" type="skewY" values="0;${-amp};0;${amp};0" dur="2.6s" begin="${d}s" repeatCount="indefinite"/>`;
     const zim = () => {
       const colours = ['#1b8a3a', '#ffd200', '#d4211f', '#000000', '#d4211f', '#ffd200', '#1b8a3a'], sh = Hh / 7;
       return colours.map((c, i) => `<rect x="0" y="${f(i * sh)}" width="${W}" height="${f(sh + .15)}" fill="${c}"/>`).join('') +
         `<path d="M0 0L4.6 ${Hh / 2}L0 ${Hh}Z" fill="#ffffff" stroke="#000" stroke-width=".35"/><circle cx="1.5" cy="${Hh / 2}" r=".8" fill="#d4211f"/><circle cx="1.7" cy="${Hh / 2}" r=".3" fill="#ffd200"/>`;
     };
-    // the ZESA flag: white cloth with the logo centred on it (logos/zesa-flag.png, logos/zesa.png (3118 x 3975) cut down to 240 px tall)
-    const LH = Hh - 1.2, LW = LH * 3118 / 3975;
-    const zesa = () => `<rect x="0" y="0" width="${W}" height="${Hh}" fill="#ffffff" stroke="#000080" stroke-width=".35"/>` +
-      `<image href="${A.url('logos/zesa-flag.png')}" x="${f((W - LW) / 2)}" y=".6" width="${f(LW)}" height="${f(LH)}" preserveAspectRatio="xMidYMid meet"/>`;
+    // the ZESA flag: navy bands left and right, a white band between them with the logo centred on it
+    // (logos/zesa-flag.png, logos/zesa.png (3118 x 3975) cut down to 240 px tall)
+    const BAND = W * .29, WB = W - 2 * BAND, LW = WB - .4, LH = LW * 3975 / 3118;
+    const zesa = () => `<rect x="0" y="0" width="${W}" height="${Hh}" fill="#2b2a6b"/><rect x="${BAND}" y="0" width="${f(WB)}" height="${Hh}" fill="#ffffff"/>` +
+      `<image href="${A.url('logos/zesa-flag.png')}" x="${f((W - LW) / 2)}" y="${f((Hh - LH) / 2)}" width="${f(LW)}" height="${f(LH)}" preserveAspectRatio="xMidYMid meet"/>`;
     const pole = x => `<path d="M${x} 0V${-H - 1}" stroke="#b2bfcc" stroke-width=".9"/><circle cx="${x}" cy="${-H - 1.4}" r="1" fill="#f2c230"/>`;
     const cloth = (x, y, inner, d, amp) => `<g transform="translate(${x},${y})"><g>${wave(d, amp)}${inner}</g></g>`;
-    return `<ellipse cx="3" cy="1" rx="8" ry="2.4" fill="#0b1e33" opacity=".16"/>` + pole(0) + pole(-12.5) +
-      cloth(.4, -H, zim(), delay, 5) + cloth(-12.1, -H, zesa(), delay + .7, 5);
+    return `<ellipse cx="3" cy="1" rx="10" ry="3" fill="#0b1e33" opacity=".16"/>` + pole(0) + pole(-GAP) +
+      cloth(.4, -H, zim(), delay, 5) + cloth(.4 - GAP, -H, zesa(), delay + .7, 5);
   }
   // the quadcopter in screen px around its body: rotors flicker, a camera ball hangs underneath
   function droneBody() {
