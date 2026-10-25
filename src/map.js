@@ -76,7 +76,7 @@
   function acting(name, at, draw) { ACTS[name] = { at }; ACT = name; draw(); ACT = null; }
   const nextCode = kind => kind + (DBG.count[kind] = (DBG.count[kind] || 0) + 1);
   function mark(kind, x, y, name, z = 0) { if (DBG) DBG.marks.push({ code: nextCode(kind), kind, x: ORG[0] + x, y: ORG[1] + y, z, name }); }
-  const LIVERY = { zetdc: 'ZETDC pickup', 'zetdc-truck': 'ZETDC truck', moepd: 'MoEPD SUV', zera: 'ZERA EV', petrotrade: 'Petrotrade tanker', noic: 'NOIC tanker' };
+  const LIVERY = { zetdc: 'ZETDC pickup', 'zetdc-truck': 'ZETDC truck', 'ref-truck': 'REF truck', moepd: 'MoEPD SUV', zera: 'ZERA EV', petrotrade: 'Petrotrade tanker', noic: 'NOIC tanker' };
   const VNAME = (kind, spec) => LIVERY[spec.livery] || (kind === 'truck' ? 'Tanker' : (spec.type || 'car').replace(/^./, c => c.toUpperCase()));
   // asset calls that register themselves
   const HOUSE = (x, y, w, d, ...rest) => { mark('h', x + w / 2, y + d / 2, 'House'); return A.houses.house(x, y, w, d, ...rest); };
@@ -211,15 +211,6 @@
   /* the ZESA + Zimbabwe flags flown at every power station: [x, y, name] in world units, on open ground at each plant's front */
   const FLAG_SPOTS = [[...loc(HW, 58, 58), 'Hwange power station'], [...loc(site('HY'), 8, 44), 'Kariba hydro station'], [...loc(SOLAR, 108, 44), 'Solar PV plant'],
     [...loc(WIND_O, -140, 10), 'Wind farm']];
-  /* the wind farm's commissioning, on open ground left of its flags (local to WIND_O): seven cars parked side by side
-     facing the ribbon ([y, car spec, name], at x = -158), guests behind an official in a black suit, who cuts the ribbon
-     RIBBON_CUT s into every RIBBON_LOOP s loop (Assets.crew.official / guest / ribbon) */
-  const RIBBON_LOOP = 12, RIBBON_CUT = 4;
-  const RIBBON_CARS = [[30, { livery: 'zera' }, 'ZERA EV'], [42, { livery: 'zera' }, 'ZERA EV'], [54, { type: 'sedan', color: '#1b1e22' }, 'Black sedan'],
-    [66, { livery: 'zetdc' }, 'ZETDC pickup'], [78, { type: 'sedan', color: '#4f7fe0' }, 'Blue sedan'], [90, { type: 'hatch', color: '#d4493e' }, 'Red hatchback'],
-    [102, { type: 'suv', color: '#9aa5b1' }, 'Grey SUV']];
-  const RIBBON_POSTS = [loc(WIND_O, -112, 52), loc(WIND_O, -112, 76)], RIBBON_MAN = loc(WIND_O, -116.4, 68);   // the scissors meet the middle of the ribbon
-  const RIBBON_GUESTS = [[-130, 46, '#4b5c9a'], [-131, 56, '#f2c35c'], [-129, 72, '#1b8a3a'], [-131, 82, '#c8202a'], [-126, 64, '#ffffff']];
   const LINES = [
     LINE_MAIN,
     LINE_HY,
@@ -631,7 +622,7 @@
     put(50, person(40, 10, '#f2c35c'));
     put(-76, lamp(-66, -10, 20)); put(-16, lamp(14, -30, 20));
     put(116, T(120, -4, 0, `<path d="M0 -6 l3 -4 l3 4z" fill="#8a6a45"/>`));
-    // the ZESA ladder truck does its rounds inside the village, stopping at the solar mini-grid, the huts and the pole by
+    // the REF ladder truck does its rounds inside the village, stopping at the solar mini-grid, the huts and the pole by
     // the huts at (-8, 2), where its line crew gets out for a repair (the loop keeps to open ground: right of the maize,
     // left of the huts, clear of the crop fields at x -82..-30 / -150..-112)
     const route = [[-20, -50], [100, -50], [152, -50], [152, 96], [40, 96], [-20, 96], [-20, 8], [-20, -50]], lap = 50, stops = { 1: 4, 4: 4, 6: 20 };
@@ -639,7 +630,7 @@
     // drawn at depth 3, so the crew goes just in front of it. The tour lands 1 s before the truck stops there.
     const parkREF = schedule(route, lap, stops).arrive[6];
     acting('crewREF', parkREF - 1, () => {
-      go('car', { livery: 'zetdc-truck', cargo: 'ladder' }, route, lap, -3, stops);
+      go('car', { livery: 'ref-truck', cargo: 'ladder' }, route, lap, -3, stops);
       lineCrew(put, parkREF, lap, -3, {
         pole: [-8, 2], foot: [-3.5, 2.5], hold: [-.5, 1], doorA: [-13.5, 1], doorB: [-13.5, 12], cone: [-17, -10], d: 3.5 });
     });
@@ -804,6 +795,17 @@
     homes.filter(h => h[1] >= 60).forEach((h, i) => home(h, i % 2 === 1, i * .4));
     mark('b', 0, 4, 'Petrotrade #1');
     put(4, `<g transform="translate(${f(P(0, 4)[0])},${f(P(0, 4)[1])}) scale(.62)">${petroStation(1)}</g>`);
+    // a Petrotrade tanker delivering to the station's underground tanks: parked beside the shop facing +y, its hose
+    // running (fuel flowing) to the fill point, one attendant on the hose and one checking the delivery on a tablet
+    acting('fuel', 0, () => {
+      const tk = [-70, -12], fill = [-50, 6], hose = [P(tk[0] + 5, tk[1] + 6, 2.5), P(fill[0], fill[1], 1.4)];
+      const hd = `M${f(hose[0][0])} ${f(hose[0][1])}Q${f((hose[0][0] + hose[1][0]) / 2)} ${f(Math.max(hose[0][1], hose[1][1]) + 7)} ${f(hose[1][0])} ${f(hose[1][1])}`;
+      put(tk[0] + tk[1], at(tk[0], tk[1], `<g transform="scale(-1,1)">${A.trucks.sprite({ livery: 'petrotrade', dir: 1, mirror: true }, 0)}</g>`));
+      put(fill[0] + fill[1] + 1, box(fill[0] - 2.5, fill[1] - 2.5, 0, 5, 5, 1.4, C.gold) +
+        `<path d="${hd}" stroke="#23272c" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="${hd}" stroke="#f2b632" stroke-width=".8" fill="none" class="flow"/>`);
+      put(fill[0] + fill[1] + 3, at(fill[0] - 6, fill[1] + 3, A.crew.attendant('hose')) + at(fill[0] + 4, fill[1] - 10, A.crew.attendant('check')));
+    });
+    mark('a', -70, -12, 'Petrotrade tanker refuelling Station #1');
     // street y = 60 traffic, up to the port road
     const end = portX(SUB[1] + 60) - SUB[0] - 10;
     const lap = 19, tankerRoute = [[-260, 55.5], [end, 55.5]];
@@ -1093,6 +1095,7 @@
       key.push([t, S[i], 'w' + nx]);
       t += Math.max(1.5, Math.hypot(S[nx][0] - S[i][0], S[nx][1] - S[i][1]) / SPEED);
     });
+    key.push([t, S[0], 's0']);              // back at the first stop, standing there until the loop starts again
     const DUR = Math.ceil(t), begin = -(idx * 11 + 3), fade = inner => `<g>${inner}<animate attributeName="opacity" values="1;1;0;0" keyTimes="0;${((DUR - 1.4) / DUR).toFixed(4)};${((DUR - .2) / DUR).toFixed(4)};1" dur="${DUR}s" begin="${begin}s" repeatCount="indefinite"/></g>`, pins = [], pose = {}, sat = [SITES.SAT[0] - CX, SITES.SAT[1] - CY + 13];
     tour.forEach((m, i) => {
       const ta = at0[i], isPole = m.kind === 'd', col = isPole ? '#ff8a1f' : '#2f8fe0', z = isPole ? 36 : 24;
@@ -1147,20 +1150,6 @@
     hydro(items);
     // flags at every power station
     FLAG_SPOTS.forEach(([x, y, name], i) => { mark('a', x, y, 'Flags (ZESA + Zimbabwe), ' + name); items.push([x + y + 4, at(x, y, EN.flags(i * .5))]); });
-    // the wind farm's ribbon cutting: parked cars, guests, the official and the ribbon
-    acting('ribbon', RIBBON_CUT - 2, () => {
-      const CR = A.crew;
-      RIBBON_CARS.forEach(([ly, spec, name]) => {
-        const [x, y] = loc(WIND_O, -158, ly);
-        mark('c', x, y, name + ' (parked, ribbon cutting)');
-        items.push([x + y, tagged(at(x, y, A.cars.car(Object.assign({ dir: 1 }, spec))))]);
-      });
-      RIBBON_GUESTS.forEach(([lx, ly, col], i) => { const [x, y] = loc(WIND_O, lx, ly); items.push([x + y, tagged(at(x, y, CR.guest(col, RIBBON_LOOP, RIBBON_CUT, i * .07)))]); });
-      mark('a', RIBBON_MAN[0], RIBBON_MAN[1], 'Official cutting the ribbon');
-      items.push([RIBBON_MAN[0] + RIBBON_MAN[1], tagged(at(RIBBON_MAN[0], RIBBON_MAN[1], CR.official(RIBBON_LOOP, RIBBON_CUT)))]);
-      const [a, b] = RIBBON_POSTS.map(([x, y]) => P(x, y, 0));
-      items.push([RIBBON_POSTS[0][0] + RIBBON_POSTS[0][1] + 16, tagged(at(...RIBBON_POSTS[0], CR.ribbon([b[0] - a[0], b[1] - a[1]], RIBBON_LOOP, RIBBON_CUT)))]);
-    });
     // the inspection crew: ZESA ladder truck, charging pad and the two pilots (the drone itself is drawn above the wires)
     mark('c', DRONE_TRUCK[0], DRONE_TRUCK[1], 'ZETDC truck (drone crew, parked)');
     items.push([DRONE_TRUCK[0] + DRONE_TRUCK[1], at(DRONE_TRUCK[0], DRONE_TRUCK[1], A.cars.car({ livery: 'zetdc-truck', cargo: 'ladder', dir: 1 }))]);

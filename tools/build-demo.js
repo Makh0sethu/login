@@ -1,7 +1,8 @@
 // builds the map-only pan/zoom demo into dist-demo/index.html:  node tools/build-demo.js   (needs: npm install)
 // One self-contained file: every script demo/index.html loads, plus its own inline script, bundled into one minified
 // script (console calls dropped, no source map), the CSS minified, and the only files the map draws inlined as data: URIs:
-// the art/svg files listed in USE_EXPORTS (src/map.js) and logos/moepd.png (the MoEPD SUV livery, src/assets/cars.js).
+// the art/svg files listed in USE_EXPORTS (src/map.js), logos/moepd.png (the MoEPD SUV livery, src/assets/cars.js) and
+// logos/zesa-flag.png (the ZESA flag at the power stations, src/assets/energy.js).
 // No art/png files are used by the map, so none ship. Keep KEEP in step with USE_EXPORTS.
 const fs = require('fs'), path = require('path'), esbuild = require('esbuild');
 const root = path.resolve(__dirname, '..'), out = path.join(root, 'dist-demo');
@@ -14,7 +15,7 @@ let html = read('demo/index.html').toString();
 // the files the map draws, keyed by the path Assets.url() is asked for (see src/core.js)
 global.window = {};
 require(path.join(root, 'art/manifest.js'));
-const all = window.Assets.exportsManifest, man = {}, files = { 'logos/moepd.png': dataUri('logos/moepd.png', 'image/png') };
+const all = window.Assets.exportsManifest, man = {}, files = { 'logos/moepd.png': dataUri('logos/moepd.png', 'image/png'), 'logos/zesa-flag.png': dataUri('logos/zesa-flag.png', 'image/png') };
 Object.keys(all).filter(KEEP).forEach(k => { const { png, ...e } = all[k]; man[k] = e; files[e.svg] = dataUri(e.svg, 'image/svg+xml'); });
 
 // classic scripts share one global scope, so they are concatenated into a single function scope, in page order

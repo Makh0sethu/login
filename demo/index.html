@@ -35,13 +35,6 @@
     background:rgba(255,255,255,.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#1d2b3a;font-size:.85rem;font-weight:600;
     box-shadow:0 6px 18px rgba(20,50,80,.18);transition:opacity .8s;pointer-events:none;white-space:nowrap;max-width:calc(100vw - 32px);overflow:hidden;text-overflow:ellipsis}
   .caption.off{opacity:0}
-  /* presenter bar for the scene tour (src/tour.js); fades out when the mouse and keys are idle */
-  .present{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:3;display:flex;gap:6px;align-items:center;padding:6px;border-radius:14px;
-    background:rgba(255,255,255,.82);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 6px 18px rgba(20,50,80,.22);transition:opacity .5s;max-width:calc(100vw - 96px)}
-  .present.idle:not(:hover):not(:focus-within){opacity:.3}
-  .present button{flex:none;width:36px;height:36px;border:0;border-radius:10px;background:#fff;color:#1d2b3a;font:600 20px/1 inherit;cursor:pointer}
-  .present button:hover{background:#e8f2fa}
-  .present select{min-width:0;height:36px;width:320px;border:1px solid #cfdae5;border-radius:10px;padding:0 8px;font:inherit;font-size:.8rem;background:#fff;color:#1d2b3a}
 
   /* ---- animations used by the map ---- */
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -78,7 +71,6 @@
   <button type="button" id="zfit" title="Reset view" aria-label="Reset view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
 </div>
 <div class="caption off" id="caption" role="status"></div>
-<div class="present" id="present"></div>
 <div class="hint" id="hint">Drag to pan &middot; scroll or pinch to zoom &middot; &larr; &rarr; for scenes</div>
 
 <script src="src/core.js"></script>
@@ -257,7 +249,7 @@ addEventListener('keydown', e => {
 });
 
 /* ---------- scene tour (src/tour.js) ----------
-   The presenter flies the map with the bar and keys (Assets.tour.controls). Dragging, the wheel, a pinch or the zoom
+   The presenter flies the map with the keys (Assets.tour.controls: arrows, PageUp / PageDown, Esc, 1-9). Dragging, the wheel, a pinch or the zoom
    buttons take over from a flight that is under way; the next scene starts from wherever the view was left. */
 const caption = document.getElementById('caption');
 const tour = Assets.tour.run({
@@ -270,7 +262,7 @@ const tour = Assets.tour.run({
 });
 ['pointerdown', 'wheel', 'dblclick'].forEach(t => svg.addEventListener(t, () => tour.interrupt(), { passive: true }));
 ['zin', 'zout', 'zfit'].forEach(id => document.getElementById(id).addEventListener('click', () => tour.interrupt()));
-Assets.tour.controls(tour, document.getElementById('present'));
+Assets.tour.controls(tour);
 })();
 </script>
 </body>

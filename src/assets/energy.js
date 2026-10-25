@@ -334,10 +334,10 @@
       return colours.map((c, i) => `<rect x="0" y="${f(i * sh)}" width="${W}" height="${f(sh + .15)}" fill="${c}"/>`).join('') +
         `<path d="M0 0L4.6 ${Hh / 2}L0 ${Hh}Z" fill="#ffffff" stroke="#000" stroke-width=".35"/><circle cx="1.5" cy="${Hh / 2}" r=".8" fill="#d4211f"/><circle cx="1.7" cy="${Hh / 2}" r=".3" fill="#ffd200"/>`;
     };
-    // the ZESA flag: white cloth with the logo (logos/zesa.png, 3118 x 3975) centred on it
+    // the ZESA flag: white cloth with the logo centred on it (logos/zesa-flag.png, logos/zesa.png (3118 x 3975) cut down to 240 px tall)
     const LH = Hh - 1.2, LW = LH * 3118 / 3975;
     const zesa = () => `<rect x="0" y="0" width="${W}" height="${Hh}" fill="#ffffff" stroke="#000080" stroke-width=".35"/>` +
-      `<image href="${A.url('logos/zesa.png')}" x="${f((W - LW) / 2)}" y=".6" width="${f(LW)}" height="${f(LH)}" preserveAspectRatio="xMidYMid meet"/>`;
+      `<image href="${A.url('logos/zesa-flag.png')}" x="${f((W - LW) / 2)}" y=".6" width="${f(LW)}" height="${f(LH)}" preserveAspectRatio="xMidYMid meet"/>`;
     const pole = x => `<path d="M${x} 0V${-H - 1}" stroke="#b2bfcc" stroke-width=".9"/><circle cx="${x}" cy="${-H - 1.4}" r="1" fill="#f2c230"/>`;
     const cloth = (x, y, inner, d, amp) => `<g transform="translate(${x},${y})"><g>${wave(d, amp)}${inner}</g></g>`;
     return `<ellipse cx="3" cy="1" rx="8" ry="2.4" fill="#0b1e33" opacity=".16"/>` + pole(0) + pole(-12.5) +

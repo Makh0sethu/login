@@ -79,61 +79,18 @@
   const during = (inner, t0, t1, dur, begin) =>
     `<g visibility="hidden">${inner}<animate attributeName="visibility" values="hidden;visible;hidden" keyTimes="0;${+(t0 / dur).toFixed(5)};${+(t1 / dur).toFixed(5)}" calcMode="discrete" dur="${dur}s" begin="${begin}s" repeatCount="indefinite"/></g>`;
 
-  /* ---------- ribbon cutting: an official in a black suit, guests and the ribbon, all on one loop of dur s with the cut
-     at cut s (begin 0, so the scene tour can restart them together) ---------- */
-  const kt = (dur, ...ts) => ts.map(t => +(t / dur).toFixed(4)).join(';');
-  // the official: black suit, white shirt, red tie, scissors in the raised right hand; they snip twice, cut, then lower the arm
-  function official(dur = 12, cut = 4) {
-    const SUIT = '#1e2126', sleeve = (x1, y1, x2, y2) => ln(x1, y1, x2, y2, SUIT, 1.2) + hand(x2, y2);
-    const blade = a => `<path d="M0 0L2.6 ${a}" stroke="#d5dde4" stroke-width=".45" stroke-linecap="round"/>`;
-    const scissors = `<g transform="translate(4.6 -6.2)"><circle cx="-.5" cy=".5" r=".55" fill="none" stroke="#d4211f" stroke-width=".35"/>` +
-      `<circle cx=".2" cy=".9" r=".55" fill="none" stroke="#d4211f" stroke-width=".35"/>${blade(-.3)}` +
-      `<g>${blade(.3)}<animateTransform attributeName="transform" type="rotate" values="0;0;-28;0;-28;0;0" keyTimes="${kt(dur, 0, cut - 1.4, cut - 1.1, cut - .8, cut - .4, cut, dur)}" dur="${dur}s" repeatCount="indefinite"/></g></g>`;
-    const arm = `<g>${sleeve(1.8, -8, 4.4, -6.2)}${scissors}<animateTransform attributeName="transform" type="rotate" values="0 1.8 -8;0 1.8 -8;55 1.8 -8;55 1.8 -8;0 1.8 -8" keyTimes="${kt(dur, 0, cut + 1.6, cut + 2.2, dur - .8, dur)}" dur="${dur}s" repeatCount="indefinite"/></g>`;
-    return shadow + leg(-.8, -4.6, -1, -.4).replace(new RegExp(NAVY, 'g'), SUIT) + leg(.8, -4.6, 1, -.4).replace(new RegExp(NAVY, 'g'), SUIT) +
-      `<rect x="-2.1" y="-8.8" width="4.2" height="4.8" rx="1" fill="${SUIT}"/><path d="M-.9 -8.8L0 -6.6L.9 -8.8Z" fill="#fff"/><path d="M0 -8.4L-.35 -6.9L0 -6.3L.35 -6.9Z" fill="#c8202a"/>` +
-      sleeve(-2, -8, -2.5, -5) + arm + `<circle cy="-9.9" r="1.45" fill="${SKIN}"/><path d="M-1.45 -10.2a1.45 1.4 0 0 1 2.9 0z" fill="#1b1e22"/>`;
-  }
-  // a guest in their own colours, arms down until the cut, then clapping for a few seconds
-  function guest(col, dur = 12, cut = 4, delay = 0) {
-    const sl = (x1, y1, x2, y2) => ln(x1, y1, x2, y2, col, 1.1) + hand(x2, y2);
-    const body = shadow + leg(-.8, -4.6, -1, -.4).replace(new RegExp(NAVY, 'g'), '#3a3f46') + leg(.8, -4.6, 1, -.4).replace(new RegExp(NAVY, 'g'), '#3a3f46') +
-      `<rect x="-2" y="-8.6" width="4" height="4.6" rx="1" fill="${col}"/><circle cy="-9.9" r="1.45" fill="${SKIN}"/><path d="M-1.45 -10.2a1.45 1.4 0 0 1 2.9 0z" fill="#23272c"/>`;
-    const clap = step(sl(-1.8, -8, -.5, -6.6), '0 0;-.5 0;0 0', .3, delay) + step(sl(1.8, -8, .5, -6.6), '0 0;.5 0;0 0', .3, delay);
-    return body + during(sl(-2, -8, -2.5, -5) + sl(2, -8, 2.5, -5), 0, cut + .2, dur, 0) + during(sl(-2, -8, -2.5, -5) + sl(2, -8, 2.5, -5), cut + 3.4 + delay, dur, dur, 0) +
-      during(clap, cut + .2, cut + 3.4 + delay, dur, 0);
-  }
-  /* the ribbon on two gold posts, from screen point a to b (around a's foot); at the cut both halves drop from their posts
-     to the ground and a burst of confetti goes up, then everything is reset unseen at the end of the loop */
-  function ribbon(b, dur = 12, cut = 4, h = 8) {
-    const post = ([x, y]) => `<ellipse cx="${f(x)}" cy="${f(y)}" rx="1.3" ry=".5" fill="#bf8f2c"/>` + ln(x, y, x, y - h, '#d9a53c', .9) + `<circle cx="${f(x)}" cy="${f(y - h - .4)}" r=".8" fill="#f2c35c"/>`;
-    const A0 = [0, -h + .4], B0 = [b[0], b[1] - h + .4], M = [B0[0] / 2, B0[1] / 2 + 1.2];
-    // each half swings down about its post top until its free end rests on the ground along the line between the posts
-    const half = (p, side) => {
-      const dx = M[0] - p[0], dy = M[1] - p[1], len = Math.hypot(dx, dy), th = Math.atan2(dy, dx) * 180 / Math.PI;
-      const D = [side * b[0], side * b[1]], q = [0, h - .4], dd = D[0] ** 2 + D[1] ** 2, qd = q[1] * D[1];
-      const disc = qd * qd - dd * (q[1] * q[1] - len * len), t = disc > 0 ? (-qd + Math.sqrt(disc)) / dd : 0;
-      const want = Math.atan2(q[1] + t * D[1], q[0] + t * D[0]) * 180 / Math.PI;
-      let r = want - th; r = ((r + 540) % 360) - 180;
-      const rot = a => f(a) + ' ' + f(p[0]) + ' ' + f(p[1]);
-      const sag = [p[0] + dx / 2, p[1] + dy / 2 + .8];
-      return `<g><path d="M${f(p[0])} ${f(p[1])}Q${f(sag[0])} ${f(sag[1])} ${f(M[0] - side * .3)} ${f(M[1])}" stroke="#d4211f" stroke-width="1.1" fill="none"/>` +
-        `<animateTransform attributeName="transform" type="rotate" values="${[0, 0, r * 1.12, r * .94, r, r, 0, 0].map(rot).join(';')}" keyTimes="${kt(dur, 0, cut, cut + .45, cut + .7, cut + .9, dur - .5, dur - .45, dur)}" dur="${dur}s" repeatCount="indefinite"/>` +
-        `<animate attributeName="opacity" values="1;1;0;0;1" keyTimes="${kt(dur, 0, dur - 1.2, dur - .7, dur - .3, dur)}" dur="${dur}s" repeatCount="indefinite"/></g>`;
-    };
-    const bow = `<g transform="translate(${f(M[0])} ${f(M[1])})"><path d="M0 0L-1.8 -1.1L-1.8 1.1ZM0 0L1.8 -1.1L1.8 1.1Z" fill="#c8202a"/><circle r=".55" fill="#f2c35c"/>` +
-      `<animate attributeName="opacity" values="1;1;0;0;1" keyTimes="${kt(dur, 0, cut, cut + .05, dur - .3, dur)}" dur="${dur}s" repeatCount="indefinite"/></g>`;
-    const COLS = ['#f2c35c', '#d4211f', '#1b8a3a', '#4aa3df', '#ffffff', '#f08c2a'];
-    let confetti = '';
-    for (let i = 0; i < 14; i++) {
-      const a = -Math.PI / 2 + (i / 13 - .5) * 2.2, dist = 5 + (i * 7 % 5), ux = Math.cos(a) * dist, uy = Math.sin(a) * dist;
-      const end = `${f(M[0] + ux * 1.6)} ${f(M[1] + 2 + (i % 3))}`;
-      confetti += `<rect x="-.45" y="-.3" width=".9" height=".6" fill="${COLS[i % COLS.length]}" opacity="0">` +
-        `<animateTransform attributeName="transform" type="translate" values="${f(M[0])} ${f(M[1])};${f(M[0])} ${f(M[1])};${f(M[0] + ux)} ${f(M[1] + uy - 4)};${end};${end}" keyTimes="${kt(dur, 0, cut, cut + .6, cut + 2.8, dur)}" dur="${dur}s" repeatCount="indefinite"/>` +
-        `<animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="${kt(dur, 0, cut, cut + .05, cut + 2.4, cut + 3, dur)}" dur="${dur}s" repeatCount="indefinite"/></rect>`;
-    }
-    return post([0, 0]) + post(b) + half(A0, 1) + half(B0, -1) + bow + confetti;
+  /* a Petrotrade fuel attendant: green shirt and cap, grey trousers. 'hose' holds the delivery hose low in front,
+     'check' reads the tablet in one hand. */
+  const GREEN = '#2f8a4c', GREEN_D = '#1f6236', GREY = '#7a838c';
+  function attendant(kind = 'hose') {
+    const gleg = (x1, y1, x2, y2) => ln(x1, y1, x2, y2, GREY, 1.5) + `<ellipse cx="${f(x2)}" cy="${f(y2)}" rx=".9" ry=".5" fill="${BOOT}"/>`;
+    const garm = (x1, y1, x2, y2) => ln(x1, y1, x2, y2, GREEN, 1.1) + hand(x2, y2);
+    let s = shadow + gleg(-.8, -4.6, -1, -.4) + gleg(.8, -4.6, 1, -.4) +
+      `<rect x="-2" y="-8.6" width="4" height="4.4" rx="1" fill="${GREEN}"/><path d="M-2 -4.5h4" stroke="${GREY}" stroke-width=".6"/>`;
+    s += kind === 'hose' ? garm(-2, -8, -1.2, -5.6) + garm(2, -8, 2.8, -6)
+      : garm(-2, -8, -2.5, -5) + garm(2, -8, 2.9, -7.4) + `<rect x="2.4" y="-9.4" width="1.8" height="2.2" rx=".3" fill="#dff3ff" stroke="#23272c" stroke-width=".3"/>`;
+    return s + `<circle cy="-9.9" r="1.45" fill="${SKIN}"/><path d="M-1.6 -10.4a1.6 1.5 0 0 1 3.2 0z" fill="${GREEN_D}"/><path d="M1.2 -10.5h1.5" stroke="${GREEN_D}" stroke-width=".6"/>`;
   }
 
-  A.crew = { stand, walk, carry, crouch, spot, climb, reach, hold, ladder, cone, actor, during, official, guest, ribbon };
+  A.crew = { stand, walk, carry, crouch, spot, climb, reach, hold, ladder, cone, actor, during, attendant };
 })();

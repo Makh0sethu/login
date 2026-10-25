@@ -1,6 +1,6 @@
 /* Cars: shaped isometric road vehicles + branded fleet liveries.
    API: Assets.cars.car(opts), Assets.cars.drive(x0, y0, x1, y1, dur, begin, opts), Assets.cars.sprite(opts, speed)
-   Types: sedan, hatch, ev, suv, pickup, minibus, truck.  Liveries: moepd, zera, zetdc, zetdc-truck.
+   Types: sedan, hatch, ev, suv, pickup, minibus, truck.  Liveries: moepd, zera, zetdc, zetdc-truck, ref-truck.
    Local frame: origin = centre of the footprint on the ground, heading +x (dir 1) or -x (dir -1).
    Cars: footprint about x -9..9, y -5..5, height up to ~12.5. Truck: x -12..12, y -5.2..5.2, height ~12.8.
    Everything goes through the global P, so it also works with the NOIC oblique P. */
@@ -131,12 +131,13 @@
     }
   };
 
-  const ZESA = ['#d7262e', '#f2c230', '#1f3f99'];
+  const ZESA = ['#d7262e', '#f2c230', '#1f3f99'], REF = ['#d7262e', '#3b2a8c', '#2e9e48'];   // REF: the logo's red arc, blue and green swoosh
   const LIVERIES = {
     moepd: { type: 'suv', color: '#f4f6f8' },
     zera: { type: 'ev', color: '#c6cdd4' },
     zetdc: { type: 'pickup', color: '#f6f7f8', rack: true },
-    'zetdc-truck': { type: 'truck', color: '#f6f7f8' }
+    'zetdc-truck': { type: 'truck', color: '#f6f7f8' },
+    'ref-truck': { type: 'truck', color: '#f6f7f8' }
   };
 
   /* ---------- the vehicle ---------- */
@@ -346,10 +347,10 @@
     }
 
     // ---- livery art painted on the lower-body side (drawn inside lowerBody, before the shading overlays) ----
-    const zesaBand = (z0b, z1b) => (prof, WW) => {
+    const zesaBand = (z0b, z1b, cols = ZESA) => (prof, WW) => {
       let b = '';
       const h = (z1b - z0b) / 3;
-      ZESA.forEach((c, i) => { const p = band(prof, z1b - h * (i + 1), z1b - h * i); if (p.length > 2) b += poly(sideAt(p, WW + 0.01), c); });
+      cols.forEach((c, i) => { const p = band(prof, z1b - h * (i + 1), z1b - h * i); if (p.length > 2) b += poly(sideAt(p, WW + 0.01), c); });
       return b;
     };
     let stripeFn = null;
@@ -359,6 +360,7 @@
     }
     if (liv === 'zetdc') stripeFn = zesaBand(4.3, 5.25);
     if (liv === 'zetdc-truck') stripeFn = zesaBand(6.0, 6.9);
+    if (liv === 'ref-truck') stripeFn = zesaBand(6.0, 6.9, REF);
 
     function liveryArt() {
       let a = '';
@@ -399,6 +401,9 @@
       }
       if (liv === 'zetdc-truck') {
         a += sideText(8.0, yS, 7.15, 'ZETDC', 'font-size=".95" font-weight="700" font-style="italic" fill="#1f3f99" font-family="Times New Roman,Georgia,serif"');
+      }
+      if (liv === 'ref-truck') {
+        a += sideText(8.0, yS, 7.15, 'REF', 'font-size=".95" font-weight="700" fill="#3b2a8c" font-family="Times New Roman,Georgia,serif"');
       }
       return a;
     }
