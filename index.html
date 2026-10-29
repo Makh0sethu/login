@@ -66,6 +66,8 @@
   /* badges shrink with the bar; 15% padding keeps every logo inside the square that fits the circle, so no corner is cut */
   footer .badge{width:100%;max-width:104px;height:auto;aspect-ratio:1;transition:transform .25s}
   footer .badge img{padding:15%}
+  /* wide wordmark: keep the circular badge, but let the image use nearly the full width of the circle */
+  footer .badge.fit img{padding:4% 3%}
   footer .ent:hover .badge{transform:translateY(-5px) scale(1.06)}
 
   /* ---- animations used by the map ---- */
@@ -132,6 +134,7 @@
     <a class="ent" href="#"><div class="badge"><img src="logos/ref.png" alt="REF"></div><span>REF</span></a>
     <a class="ent" href="#"><div class="badge"><img src="logos/noic.png" alt="NOIC"></div><span>NOIC</span></a>
     <a class="ent" href="#"><div class="badge"><img src="logos/petrotrade.png" alt="Petrotrade"></div><span>Petrotrade</span></a>
+    <a class="ent" href="#"><div class="badge fit"><img src="logos/petrozim-line-crop.png" alt="Petrozim Line"></div><span>Petrozim Line</span></a>
     <a class="ent" href="#"><div class="badge"><img src="logos/SAP.png" alt="SAPP"></div><span>SAPP</span></a>
   </footer>
 </div>
